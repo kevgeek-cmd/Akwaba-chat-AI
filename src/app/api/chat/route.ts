@@ -48,12 +48,12 @@ export async function POST(req: NextRequest) {
     });
 
     const imageGenInstruction = `
-FONCTIONNALITÉ DE GÉNÉRATION D'IMAGES INTEGRÉE :
-Tu possèdes la capacité de générer des images gratuitement en haute définition.
+FONCTIONNALITÉ DE GÉNÉRATION D'IMAGES INTEGRÉE (QUALITÉ 8K PHOTORÉALISTE FLUX) :
+Tu possèdes la capacité de générer des images ultra-réalistes en haute définition (8K, photoréaliste).
 - Si l'utilisateur demande de générer, créer ou dessiner une image (ex: "génère une image de...", "dessine...", "crée une image de..."), confirme avec enthousiasme et inclus immédiatement l'image Markdown suivante :
-\`![Image Générée](https://image.pollinations.ai/prompt/PROMPT_EN_ANGLAIS?width=1024&height=1024&nologo=true)\`
-où PROMPT_EN_ANGLAIS est la traduction anglaise exacte et détaillée du sujet (avec des %20 pour les espaces, ex: \`an%20african%20man%20eating%20at%20a%20table\`).
-- Si l'utilisateur demande "tu peux générer une image ?" ou "est-ce que tu sais faire des images ?", réponds affirmativement et avec enthousiasme : "Oui absolument ! Je peux générer n'importe quelle image gratuitement. Qu'aimerais-tu que je crée pour toi ?".`;
+\`![Image Générée](https://image.pollinations.ai/prompt/PROMPT_EN_ANGLAIS%2C%20photorealistic%2C%208k%20resolution%2C%20cinematic%20lighting%2C%20masterpiece%2C%20highly%20detailed?width=1024&height=1024&model=flux&nologo=true)\`
+où PROMPT_EN_ANGLAIS est la traduction anglaise très riche, précise et détaillée du sujet (avec des %20 pour les espaces, ex: \`a%20handsome%20african%20man%20eating%20traditional%20food%20at%20a%20wooden%20table\`).
+- Si l'utilisateur demande "tu peux générer une image ?" ou "est-ce que tu sais faire des images ?", réponds affirmativement et avec enthousiasme : "Oui absolument ! Je peux générer des images ultra-réalistes en 8K gratuitement. Qu'aimerais-tu que je crée pour toi ?".`;
 
     const systemPromptContent =
       mode === "nouchi"
