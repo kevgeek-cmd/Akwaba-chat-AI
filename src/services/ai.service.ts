@@ -4,7 +4,7 @@ export interface ChatMessagePayload {
 }
 
 export class AIService {
-  private static OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+  private static GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 
   static async streamCompletion(options: {
     model: string;
@@ -13,22 +13,29 @@ export class AIService {
     temperature?: number;
     maxTokens?: number;
   }) {
-    const apiKey = options.apiKey || process.env.OPENROUTER_API_KEY;
+    const apiKey = options.apiKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_STUDIO_API_KEY;
 
     if (!apiKey) {
-      throw new Error("Clé API OpenRouter manquante. Veuillez configurer OPENROUTER_API_KEY.");
+      throw new Error("Clé API Google AI Studio manquante. Veuillez configurer GEMINI_API_KEY.");
     }
 
-    const response = await fetch(this.OPENROUTER_URL, {
+    // Adapt model name for Google AI Studio
+    let modelName = options.model;
+    if (modelName.includes("/")) {
+      modelName = modelName.split("/").pop() || modelName;
+    }
+    if (!modelName.startsWith("gemini-")) {
+      modelName = "gemini-2.0-flash";
+    }
+
+    const response = await fetch(this.GEMINI_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
-        "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-        "X-Title": "Akwaba Chat",
       },
       body: JSON.stringify({
-        model: options.model,
+        model: modelName,
         messages: options.messages,
         temperature: options.temperature ?? 0.7,
         max_tokens: options.maxTokens ?? 2048,
@@ -38,9 +45,10 @@ export class AIService {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`OpenRouter Error (${response.status}): ${errorText}`);
+      throw new Error(`Google AI Studio Error (${response.status}): ${errorText}`);
     }
 
     return response;
   }
 }
+
