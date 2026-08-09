@@ -22,7 +22,7 @@ export function ElephantLoader() {
   return (
     <div className="flex flex-col items-center justify-center p-2 text-center animate-fade-in w-full max-w-xs mx-auto">
       {/* Container CSS 3D Scene */}
-      <div className="relative w-[200px] h-[150px] flex items-center justify-center scale-90 sm:scale-100">
+      <div className="relative w-50 h-37.5 flex items-center justify-center scale-90 sm:scale-100">
         {/* Ombres de sol */}
         <div className="elephant-shadow" />
 
@@ -61,7 +61,7 @@ export function ElephantLoader() {
       </div>
 
       {/* Barre de Progression Fluide */}
-      <div className="w-full max-w-[200px] h-1.5 mt-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-200/50 dark:border-slate-700/50 shadow-inner">
+      <div className="w-full max-w-50 h-1.5 mt-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-200/50 dark:border-slate-700/50 shadow-inner">
         <div
           className="h-full bg-linear-to-r from-emerald-500 via-akwaba-green to-teal-400 transition-all duration-300 ease-out rounded-full shadow-sm"
           style={{ width: `${progress}%` }}
