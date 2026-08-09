@@ -1,0 +1,105 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum Feedback {
+  LIKE
+  DISLIKE
+  NONE
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  name          String?
+  avatarUrl     String?
+  supabaseId    String         @unique
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  conversations Conversation[]
+  settings      Settings?
+
+  @@map("users")
+}
+
+model Conversation {
+  id        String    @id @default(uuid())
+  title     String    @default("Nouvelle conversation")
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isPinned  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  messages  Message[]
+
+  @@index([userId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           Role
+  content        String       @db.Text
+  modelUsed      String?
+  executionTime  Int?
+  feedback       Feedback     @default(NONE)
+  createdAt      DateTime     @default(now())
+  attachments    Attachment[]
+
+  @@index([conversationId])
+  @@map("messages")
+}
+
+model Attachment {
+  id        String   @id @default(uuid())
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  fileUrl   String
+  fileType  String
+  fileName  String
+  fileSize  Int
+  createdAt DateTime @default(now())
+
+  @@map("attachments")
+}
+
+model AiModel {
+  id             String   @id @default(uuid())
+  slug           String   @unique
+  name           String
+  provider       String
+  description    String?
+  isDefault      Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  supportsVision Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@map("ai_models")
+}
+
+model Settings {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  defaultModel String   @default("openai/gpt-4o-mini")
+  theme        String   @default("system")
+  systemPrompt String?
+  maxTokens    Int      @default(2048)
+  temperature  Float    @default(0.7)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("settings")
+}
