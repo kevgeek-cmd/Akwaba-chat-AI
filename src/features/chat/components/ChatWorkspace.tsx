@@ -12,7 +12,7 @@ export function ChatWorkspace() {
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageData[]>([]);
-  const [currentModel, setCurrentModel] = useState("openai/gpt-4o-mini");
+  const [currentModel, setCurrentModel] = useState("gemini-2.0-flash");
   const [isLoading, setIsLoading] = useState(false);
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -23,10 +23,10 @@ export function ChatWorkspace() {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const availableModels = [
-    { slug: "openai/gpt-4o-mini", name: "GPT-4o Mini", provider: "OpenAI" },
-    { slug: "meta-llama/llama-3.3-70b-instruct", name: "Llama 3.3 70B", provider: "Meta" },
-    { slug: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet", provider: "Anthropic" },
-    { slug: "google/gemini-2.0-flash-001", name: "Gemini 2.0 Flash", provider: "Google" },
+    { slug: "gemini-2.0-flash", name: "Gemini 2.0 Flash", provider: "Google AI Studio" },
+    { slug: "gemini-2.0-flash-lite", name: "Gemini 2.0 Flash Lite", provider: "Google AI Studio" },
+    { slug: "gemini-1.5-pro", name: "Gemini 1.5 Pro", provider: "Google AI Studio" },
+    { slug: "gemini-1.5-flash", name: "Gemini 1.5 Flash", provider: "Google AI Studio" },
   ];
 
   const fetchConversations = async () => {
@@ -128,7 +128,9 @@ export function ChatWorkspace() {
       });
 
       if (!response.ok) {
-        throw new Error("Erreur serveur lors de la réponse IA");
+        const errorJson = await response.json().catch(() => null);
+        const serverError = errorJson?.error || "Erreur serveur lors de la réponse IA";
+        throw new Error(serverError);
       }
 
       const reader = response.body?.getReader();
@@ -183,12 +185,13 @@ export function ChatWorkspace() {
     } catch (err: unknown) {
       const isAbort = err && typeof err === "object" && "name" in err && err.name === "AbortError";
       if (!isAbort) {
+        const errorMessage = err instanceof Error ? err.message : "Désolé, une erreur est survenue lors de la réponse. Veuillez réessayer.";
         setMessages((prev) =>
           prev.map((m) =>
             m.id === aiMessageId
               ? {
                   ...m,
-                  content: "Désolé, une erreur est survenue lors de la réponse. Veuillez réessayer.",
+                  content: `Erreur : ${errorMessage}`,
                 }
               : m
           )
