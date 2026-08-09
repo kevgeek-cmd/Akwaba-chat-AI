@@ -88,7 +88,7 @@ export function MessageBubble({ message, onFeedback, onRegenerate }: MessageBubb
           }`}
         >
           {message.content ? (
-            <div className="prose dark:prose-invert max-w-none break-words text-sm sm:text-base leading-relaxed">
+            <div className="prose dark:prose-invert max-w-none wrap-break-word text-sm sm:text-base leading-relaxed">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
