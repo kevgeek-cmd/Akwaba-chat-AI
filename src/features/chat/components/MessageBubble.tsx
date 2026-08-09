@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, Sparkles } from "lucide-react";
+import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, Sparkles, ExternalLink } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { ElephantLoader } from "@/components/shared/ElephantLoader";
 
 export interface MessageData {
@@ -86,7 +88,30 @@ export function MessageBubble({ message, onFeedback, onRegenerate }: MessageBubb
           }`}
         >
           {message.content ? (
-            <div className="whitespace-pre-wrap wrap-break-word">{message.content}</div>
+            <div className="prose dark:prose-invert max-w-none break-words text-sm sm:text-base leading-relaxed">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  a: ({ href, children }) => (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`inline-flex items-center gap-1 font-semibold underline underline-offset-2 transition-colors ${
+                        isUser
+                          ? "text-white hover:text-emerald-100"
+                          : "text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
+                      }`}
+                    >
+                      <span>{children}</span>
+                      <ExternalLink className="w-3.5 h-3.5 inline-block shrink-0 opacity-80" />
+                    </a>
+                  ),
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
+            </div>
           ) : (
             <ElephantLoader />
           )}
