@@ -133,7 +133,7 @@ export function ElephantLoader() {
       {/* Smooth Progress Bar Indicator */}
       <div className="w-full max-w-xs h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-200/50 dark:border-slate-700/50">
         <div
-          className="h-full bg-gradient-to-r from-emerald-500 via-akwaba-green to-teal-400 transition-all duration-300 ease-out rounded-full shadow-sm"
+          className="h-full bg-linear-to-r from-emerald-500 via-akwaba-green to-teal-400 transition-all duration-300 ease-out rounded-full shadow-sm"
           style={{ width: `${progress}%` }}
         />
       </div>
