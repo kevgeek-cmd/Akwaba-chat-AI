@@ -50,18 +50,13 @@ export function MessageBubble({ message, onFeedback, onRegenerate }: MessageBubb
     >
       {/* AI Elephant Avatar Icon */}
       {!isUser && (
-        <div className="w-8 h-8 rounded-full bg-akwaba-green text-white flex items-center justify-center shrink-0 shadow-sm mt-1">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-4 h-4"
-          >
-            <path d="M12 4c-4.4 0-8 3.6-8 8 0 2.2.9 4.2 2.3 5.7L6 20h3l.7-2.3c.7.2 1.5.3 2.3.3 4.4 0 8-3.6 8-8s-3.6-8-8-8z" />
-          </svg>
+        <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center shrink-0 shadow-sm mt-1 overflow-hidden p-0.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/elephant-majestueux-isole_23-2151857816.png"
+            alt="Akwaba IA"
+            className="w-full h-full object-contain"
+          />
         </div>
       )}
 
