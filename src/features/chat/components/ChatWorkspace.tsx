@@ -15,6 +15,7 @@ export function ChatWorkspace() {
   const [currentModel, setCurrentModel] = useState("openai/gpt-4o-mini");
   const [isLoading, setIsLoading] = useState(false);
 
+  const [toneMode, setToneMode] = useState<"nouchi" | "standard">("nouchi");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -136,6 +137,7 @@ export function ChatWorkspace() {
           conversationId: currentConversationId || undefined,
           model: currentModel,
           imageUrl,
+          mode: toneMode,
         }),
         signal: abortControllerRef.current.signal,
       });
@@ -322,6 +324,8 @@ export function ChatWorkspace() {
           currentModel={currentModel}
           availableModels={modelsList}
           onSelectModel={setCurrentModel}
+          toneMode={toneMode}
+          onToggleToneMode={setToneMode}
           onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
         />
 

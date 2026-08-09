@@ -5,6 +5,7 @@ export const sendMessageSchema = z.object({
   conversationId: z.string().uuid().optional(),
   model: z.string().default("openai/gpt-4o-mini"),
   imageUrl: z.string().url().optional(),
+  mode: z.enum(["nouchi", "standard"]).default("nouchi"),
 });
 
 export const renameConversationSchema = z.object({

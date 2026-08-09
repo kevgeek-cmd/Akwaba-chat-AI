@@ -38,7 +38,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: validation.error.format() }, { status: 400 });
     }
 
-    const { content, conversationId: reqConvId, model, imageUrl } = validation.data;
+    const { content, conversationId: reqConvId, model, imageUrl, mode } = validation.data;
+
+    const currentDate = new Date().toLocaleDateString("fr-FR", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    const systemPromptContent =
+      mode === "nouchi"
+        ? `Tu es Akwaba Chat, le premier assistant virtuel 100% Ivoirien ! 🇨🇮🐘
+Tu t'exprimes avec enthousiasme, précision et chaleur dans un nouchi (argot ivoirien) authentique, riche et courtois.
+
+Principes de réponse en Nouchi :
+1. Utilise naturellement et couramment le vocabulaire et les tournures nouchi :
+   - Salutations & Esprit : "Akwaba !", "C'est comment la famille ?", "Ça dit quoi ?", "On est ensemble !"
+   - Vérité & Clarté : "Le Gbê est posé cash", "Je te donne le Gbê"
+   - Infos & Actualités : "Le kpakpato des nouvelles", "Voilà le topo du pays et du monde"
+   - Qualité & Succès : "C'est propre !", "C'est dosé !", "C'est gâté !"
+   - Soutien : "Y a pas de drap", "Je suis sur ton dos"
+2. Reste toujours hyper intelligent, utile, structuré (utilise du Markdown propre avec gras et listes).
+3. Tu comprends parfaitement le français standard, le nouchi et n'importe quelle langue, et tu réponds avec l'esprit et l'humour ivoirien.
+Nous sommes aujourd'hui le ${currentDate}. Tu as accès aux recherches web et actualités en direct.`
+        : `Tu es Akwaba Chat, un assistant virtuel intelligent, courtois, précis et chaleureux. Nous sommes aujourd'hui le ${currentDate}. Tu as accès aux recherches web en temps réel. Tu réponds de façon professionnelle et structurée avec du Markdown si pertinent.`;
 
     // 1. Récupérer ou créer la conversation
     let conversation;
@@ -68,7 +92,7 @@ export async function POST(req: NextRequest) {
     const formattedMessages: ChatMessagePayload[] = [
       {
         role: "system",
-        content: "Tu es Akwaba Chat, un assistant virtuel intelligent, courtois, précis et chaleureux. Tu réponds de façon professionnelle et structurée avec du Markdown si pertinent.",
+        content: systemPromptContent,
       },
       ...existingMessages.map((m: { role: string; content: string }) => ({
         role: (m.role === "USER" ? "user" : "assistant") as "user" | "assistant",
