@@ -107,6 +107,30 @@ export function MessageBubble({ message, onFeedback, onRegenerate }: MessageBubb
                       <ExternalLink className="w-3.5 h-3.5 inline-block shrink-0 opacity-80" />
                     </a>
                   ),
+                  img: ({ src, alt }) => {
+                    const imageSrc = typeof src === "string" ? src : undefined;
+                    return (
+                      <span className="block my-3">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={imageSrc}
+                          alt={alt || "Image générée"}
+                          loading="lazy"
+                          className="max-w-full h-auto rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md hover:shadow-xl transition-all duration-300"
+                        />
+                        {imageSrc && (
+                          <a
+                            href={imageSrc}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-akwaba-green hover:underline"
+                          >
+                            🔍 Ouvrir / Télécharger en HD
+                          </a>
+                        )}
+                      </span>
+                    );
+                  },
                 }}
               >
                 {message.content}
