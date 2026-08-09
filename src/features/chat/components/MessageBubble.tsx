@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, Sparkles, ExternalLink } from "lucide-react";
+import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, Sparkles, ExternalLink, Download } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ElephantLoader } from "@/components/shared/ElephantLoader";
@@ -24,6 +24,7 @@ interface MessageBubbleProps {
 
 export function MessageBubble({ message, onFeedback, onRegenerate }: MessageBubbleProps) {
   const [copied, setCopied] = useState(false);
+  const [downloadingUrl, setDownloadingUrl] = useState<string | null>(null);
   const [currentFeedback, setCurrentFeedback] = useState<"LIKE" | "DISLIKE" | "NONE">(
     message.feedback || "NONE"
   );
@@ -41,6 +42,27 @@ export function MessageBubble({ message, onFeedback, onRegenerate }: MessageBubb
     setCurrentFeedback(nextFeedback);
     if (onFeedback) {
       onFeedback(message.id, nextFeedback);
+    }
+  };
+
+  const handleDownloadImage = async (url: string) => {
+    try {
+      setDownloadingUrl(url);
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `akwaba-image-${Date.now()}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error("Erreur de téléchargement d'image:", err);
+      window.open(url, "_blank");
+    } finally {
+      setDownloadingUrl(null);
     }
   };
 
@@ -119,14 +141,26 @@ export function MessageBubble({ message, onFeedback, onRegenerate }: MessageBubb
                           className="max-w-full h-auto rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md hover:shadow-xl transition-all duration-300"
                         />
                         {imageSrc && (
-                          <a
-                            href={imageSrc}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-akwaba-green hover:underline"
-                          >
-                            🔍 Ouvrir / Télécharger en HD
-                          </a>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadImage(imageSrc)}
+                              disabled={downloadingUrl === imageSrc}
+                              className="px-3 py-1.5 rounded-xl bg-akwaba-green hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-all duration-200 active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              <span>{downloadingUrl === imageSrc ? "Téléchargement..." : "Télécharger l'image"}</span>
+                            </button>
+                            <a
+                              href={imageSrc}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-all duration-200 flex items-center gap-1.5"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              <span>Voir en grand</span>
+                            </a>
+                          </div>
                         )}
                       </span>
                     );
