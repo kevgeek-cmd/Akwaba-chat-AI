@@ -22,12 +22,14 @@ export function ChatWorkspace() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const availableModels = [
-    { slug: "openai/gpt-4o-mini", name: "GPT-4o Mini", provider: "OpenAI" },
-    { slug: "meta-llama/llama-3.3-70b-instruct", name: "Llama 3.3 70B", provider: "Meta" },
-    { slug: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet", provider: "Anthropic" },
-    { slug: "openrouter/auto", name: "OpenRouter Auto", provider: "OpenRouter" },
-  ];
+  const [modelsList, setModelsList] = useState<Array<{ slug: string; name: string; provider: string; supportsVision?: boolean }>>([
+    { slug: "openai/gpt-4o-mini", name: "GPT-4o Mini", provider: "OpenAI", supportsVision: true },
+    { slug: "openrouter/free", name: "OpenRouter Free", provider: "OpenRouter (Free)", supportsVision: true },
+    { slug: "google/gemma-4-31b-it:free", name: "Gemma 4 31B Vision", provider: "Google (Free)", supportsVision: true },
+    { slug: "nvidia/nemotron-nano-12b-v2-vl:free", name: "Nemotron 12B VL", provider: "NVIDIA (Free)", supportsVision: true },
+    { slug: "meta-llama/llama-3.3-70b-instruct", name: "Llama 3.3 70B", provider: "Meta", supportsVision: false },
+    { slug: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet", provider: "Anthropic", supportsVision: true },
+  ]);
 
   const fetchConversations = async () => {
     try {
@@ -41,18 +43,29 @@ export function ChatWorkspace() {
     }
   };
 
-  // Load conversations on mount
+  // Load conversations & dynamic models on mount
   useEffect(() => {
     let ignore = false;
     async function loadData() {
       try {
-        const res = await fetch("/api/conversations");
-        if (res.ok && !ignore) {
-          const data = await res.json();
+        const [convRes, modelsRes] = await Promise.all([
+          fetch("/api/conversations"),
+          fetch("/api/models"),
+        ]);
+
+        if (convRes.ok && !ignore) {
+          const data = await convRes.json();
           setConversations(data);
         }
+
+        if (modelsRes.ok && !ignore) {
+          const mData = await modelsRes.json();
+          if (Array.isArray(mData) && mData.length > 0) {
+            setModelsList(mData);
+          }
+        }
       } catch (err) {
-        console.error("Erreur chargement conversations:", err);
+        console.error("Erreur chargement données:", err);
       }
     }
     loadData();
@@ -107,7 +120,7 @@ export function ChatWorkspace() {
       id: aiMessageId,
       role: "ASSISTANT",
       content: "",
-      modelUsed: availableModels.find((m) => m.slug === currentModel)?.name || currentModel,
+      modelUsed: modelsList.find((m) => m.slug === currentModel)?.name || currentModel,
     };
 
     setMessages((prev) => [...prev, aiMsgPlaceholder]);
@@ -170,7 +183,7 @@ export function ChatWorkspace() {
                           ...m,
                           id: data.messageId || aiMessageId,
                           executionTime: data.executionTime,
-                          modelUsed: availableModels.find((mod) => mod.slug === data.modelUsed)?.name || data.modelUsed,
+                          modelUsed: modelsList.find((mod) => mod.slug === data.modelUsed)?.name || data.modelUsed,
                         }
                       : m
                   )
@@ -307,7 +320,7 @@ export function ChatWorkspace() {
         {/* Top Header */}
         <Header
           currentModel={currentModel}
-          availableModels={availableModels}
+          availableModels={modelsList}
           onSelectModel={setCurrentModel}
           onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
         />

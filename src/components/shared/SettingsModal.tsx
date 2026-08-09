@@ -24,10 +24,12 @@ export function SettingsModal({
   if (!isOpen) return null;
 
   const models = [
-    { slug: "openai/gpt-4o-mini", name: "GPT-4o Mini", provider: "OpenAI", desc: "Rapide et très performant au quotidien" },
-    { slug: "meta-llama/llama-3.3-70b-instruct", name: "Llama 3.3 70B", provider: "Meta", desc: "Puissant modèle Open-Source" },
-    { slug: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet", provider: "Anthropic", desc: "Excellent pour le code et l'analyse" },
-    { slug: "google/gemini-2.0-flash-001", name: "Gemini 2.0 Flash", provider: "Google", desc: "Ultra rapide et multimodal" },
+    { slug: "openai/gpt-4o-mini", name: "GPT-4o Mini", provider: "OpenAI", desc: "Rapide et multimodal (Texte & Vision)" },
+    { slug: "openrouter/free", name: "OpenRouter Free", provider: "OpenRouter (Free)", desc: "100% Gratuit - Support Vision & Texte" },
+    { slug: "google/gemma-4-31b-it:free", name: "Gemma 4 31B Vision", provider: "Google (Free)", desc: "100% Gratuit - Analyse d'images et texte" },
+    { slug: "nvidia/nemotron-nano-12b-v2-vl:free", name: "Nemotron 12B VL", provider: "NVIDIA (Free)", desc: "100% Gratuit - Vision-Language de NVIDIA" },
+    { slug: "meta-llama/llama-3.3-70b-instruct", name: "Llama 3.3 70B", provider: "Meta", desc: "Puissant modèle Open-Source pour le texte" },
+    { slug: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet", provider: "Anthropic", desc: "Excellent pour le code et l'analyse d'images" },
   ];
 
   const handleSave = () => {
