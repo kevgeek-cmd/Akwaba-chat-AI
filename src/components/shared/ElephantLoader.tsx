@@ -24,12 +24,12 @@ export function ElephantLoader() {
       {/* Animated Elephant & Progress Header */}
       <div className="flex items-center gap-3">
         {/* Animated Majestic Elephant Image */}
-        <div className="relative w-14 h-14 flex items-center justify-center shrink-0">
+        <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/elephant-majestueux-isole_23-2151857816.png"
+            src="/elephant.png"
             alt="Éléphant Akwaba"
-            className="w-14 h-14 object-contain animate-bounce drop-shadow-md"
+            className="w-12 h-12 object-contain animate-bounce drop-shadow-md"
             style={{ animationDuration: "1.4s" }}
           />
         </div>

@@ -53,7 +53,7 @@ export function MessageBubble({ message, onFeedback, onRegenerate }: MessageBubb
         <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center shrink-0 shadow-sm mt-1 overflow-hidden p-0.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/elephant-majestueux-isole_23-2151857816.png"
+            src="/elephant.png"
             alt="Akwaba IA"
             className="w-full h-full object-contain"
           />
