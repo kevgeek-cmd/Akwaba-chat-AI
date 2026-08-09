@@ -1,13 +1,19 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Image as ImageIcon, Send, Square, X } from "lucide-react";
+import { Image as ImageIcon, Send, Square, X, Smile, Mic, MicOff } from "lucide-react";
 
 interface ChatInputProps {
   onSendMessage: (text: string, imageUrl?: string) => void;
   isLoading?: boolean;
   onStopGeneration?: () => void;
 }
+
+const EMOJI_LIST = [
+  "🇨🇮", "🐘", "🔥", "😊", "😂", "🤣", "😎", "👍", "❤️", "💯",
+  "👏", "🎉", "🚀", "💪", "🤝", "🙏", "👀", "🤫", "💡", "🎯",
+  "🌟", "⚡", "🥊", "🏆", "🙌", "🤩", "✌️", "️😁", "😴", "🤙"
+];
 
 export function ChatInput({
   onSendMessage,
@@ -17,8 +23,13 @@ export function ChatInput({
   const [message, setMessage] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
 
   const MAX_CHARS = 2000;
 
@@ -30,12 +41,72 @@ export function ChatInput({
     }
   }, [message]);
 
+  // Voice to text SpeechRecognition handler
+  const toggleSpeechRecognition = () => {
+    if (isListening) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsListening(false);
+      return;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert("La reconnaissance vocale n'est pas supportée sur ce navigateur. Veuillez utiliser Chrome, Safari ou Edge.");
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = "fr-FR";
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      recognition.onresult = (event: any) => {
+        let transcript = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        if (transcript) {
+          setMessage((prev) => {
+            const trimmedPrev = prev.trim();
+            return trimmedPrev ? `${trimmedPrev} ${transcript}` : transcript;
+          });
+        }
+      };
+
+      recognition.onerror = () => {
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognition.start();
+      recognitionRef.current = recognition;
+      setIsListening(true);
+    } catch (err) {
+      console.error("Erreur reconnaissance vocale:", err);
+      setIsListening(false);
+    }
+  };
+
   const handleSend = () => {
     if ((!message.trim() && !imageUrl) || isLoading) return;
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    }
     onSendMessage(message.trim(), imageUrl || undefined);
     setMessage("");
     setImageUrl(null);
     setImagePreview(null);
+    setShowEmojiPicker(false);
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
@@ -61,8 +132,32 @@ export function ChatInput({
     }
   };
 
+  const handleInsertEmoji = (emoji: string) => {
+    setMessage((prev) => prev + emoji);
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  };
+
   return (
     <div className="w-full max-w-3xl mx-auto px-4 pb-4">
+      {/* Listening Indicator Banner */}
+      {isListening && (
+        <div className="mb-2 px-4 py-2 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-xs font-semibold text-red-600 dark:text-red-300 flex items-center justify-between animate-pulse">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+            <span>🎙️ Écoute vocale en cours... Parlez maintenant (Vocale ➔ Texte)</span>
+          </div>
+          <button
+            type="button"
+            onClick={toggleSpeechRecognition}
+            className="text-[11px] underline font-bold"
+          >
+            Arrêter
+          </button>
+        </div>
+      )}
+
       {/* Image Preview Tag */}
       {imagePreview && (
         <div className="mb-2 relative inline-block">
@@ -85,8 +180,27 @@ export function ChatInput({
         </div>
       )}
 
+      {/* Emoji Picker Popover Box */}
+      {showEmojiPicker && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setShowEmojiPicker(false)} />
+          <div className="relative mb-2 z-40 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xl grid grid-cols-10 gap-1.5 max-w-sm animate-fade-in">
+            {EMOJI_LIST.map((emoji, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => handleInsertEmoji(emoji)}
+                className="w-8 h-8 flex items-center justify-center text-lg rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-transform active:scale-125"
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
       {/* Main Input Card Floating Container */}
-      <div className="relative bg-white dark:bg-slate-800 rounded-[28px] border border-slate-200/80 dark:border-slate-700/80 shadow-lg shadow-slate-200/50 dark:shadow-none p-2.5 flex items-center gap-3 transition-all focus-within:border-akwaba-green focus-within:ring-2 focus-within:ring-[#057A55]/10">
+      <div className="relative bg-white dark:bg-slate-800 rounded-[28px] border border-slate-200/80 dark:border-slate-700/80 shadow-lg shadow-slate-200/50 dark:shadow-none p-2.5 flex items-center gap-2 transition-all focus-within:border-akwaba-green focus-within:ring-2 focus-within:ring-[#057A55]/10">
         {/* Hidden File Input */}
         <input
           type="file"
@@ -101,9 +215,41 @@ export function ChatInput({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           title="Ajouter une image"
-          className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-700/60 text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 transition-colors shrink-0"
+          className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-700/60 text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 transition-colors shrink-0"
         >
           <ImageIcon className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+        </button>
+
+        {/* Emoji Picker Button */}
+        <button
+          type="button"
+          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+          title="Insérer des émojis"
+          className={`p-2.5 rounded-2xl transition-colors shrink-0 ${
+            showEmojiPicker
+              ? "bg-amber-100 dark:bg-amber-950/60 text-amber-600"
+              : "bg-slate-50 dark:bg-slate-700/60 text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100"
+          }`}
+        >
+          <Smile className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+        </button>
+
+        {/* Voice-to-Text Microphone Button */}
+        <button
+          type="button"
+          onClick={toggleSpeechRecognition}
+          title={isListening ? "Arrêter la dictée vocale" : "Dictée vocale (Note vocale ➔ Texte)"}
+          className={`p-2.5 rounded-2xl transition-all shrink-0 ${
+            isListening
+              ? "bg-red-500 text-white animate-pulse shadow-md"
+              : "bg-slate-50 dark:bg-slate-700/60 text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100"
+          }`}
+        >
+          {isListening ? (
+            <MicOff className="w-5 h-5 text-white" />
+          ) : (
+            <Mic className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+          )}
         </button>
 
         {/* Textarea Input */}
@@ -112,7 +258,7 @@ export function ChatInput({
           value={message}
           onChange={(e) => setMessage(e.target.value.slice(0, MAX_CHARS))}
           onKeyDown={handleKeyDown}
-          placeholder="Écrivez votre message..."
+          placeholder={isListening ? "Dictée en cours..." : "Écrivez votre message..."}
           rows={1}
           className="w-full bg-transparent text-slate-800 dark:text-slate-100 placeholder-slate-400 text-sm sm:text-base focus:outline-none resize-none min-h-6 max-h-40 py-1"
         />

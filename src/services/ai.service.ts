@@ -33,7 +33,6 @@ export class AIService {
         temperature: options.temperature ?? 0.7,
         max_tokens: options.maxTokens ?? 2048,
         stream: true,
-        plugins: [{ id: "web" }],
       }),
     });
 
