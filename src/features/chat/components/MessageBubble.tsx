@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, Sparkles } from "lucide-react";
+import { ElephantLoader } from "@/components/shared/ElephantLoader";
 
 export interface MessageData {
   id: string;
@@ -89,7 +90,11 @@ export function MessageBubble({ message, onFeedback, onRegenerate }: MessageBubb
               : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-tl-sm border border-slate-100 dark:border-slate-700 shadow-sm"
           }`}
         >
-          <div className="whitespace-pre-wrap wrap-break-word">{message.content}</div>
+          {message.content ? (
+            <div className="whitespace-pre-wrap wrap-break-word">{message.content}</div>
+          ) : (
+            <ElephantLoader />
+          )}
         </div>
 
         {/* AI Message Footer: Metadata & Actions */}
