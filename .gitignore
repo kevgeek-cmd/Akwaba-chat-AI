@@ -49,4 +49,7 @@ security-reports/
 supabase/.temp/
 supabase/.branches/
 
+# test files
+test_*.jpg
+
 

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { motion } from "framer-motion";
 import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, Sparkles, ExternalLink, Download } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -67,8 +68,11 @@ export function MessageBubble({ message, onFeedback, onRegenerate }: MessageBubb
   };
 
   return (
-    <div
-      className={`flex gap-3 mb-6 animate-fade-in ${
+    <motion.div
+      initial={{ opacity: 0, y: 10, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+      className={`flex gap-3 mb-6 ${
         isUser ? "justify-end" : "justify-start"
       }`}
     >
@@ -244,6 +248,6 @@ export function MessageBubble({ message, onFeedback, onRegenerate }: MessageBubb
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
