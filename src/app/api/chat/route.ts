@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { formatNouchiLexiconForPrompt } from "@/lib/knowledge/nouchi-dictionary";
 import { formatIvorianDataForPrompt } from "@/lib/knowledge/ivorian-data";
+import { formatIvorianArtistsForPrompt } from "@/lib/knowledge/ivorian-artists";
 
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
@@ -53,6 +54,7 @@ export async function POST(req: NextRequest) {
 
     const nouchiLexicon = formatNouchiLexiconForPrompt();
     const ivorianData = formatIvorianDataForPrompt();
+    const ivorianArtists = formatIvorianArtistsForPrompt();
 
     const imageGenInstruction = `
 FONCTIONNALITÉ DE GÉNÉRATION D'IMAGES INTEGRÉE (QUALITÉ 8K PHOTORÉALISTE FLUX) :
@@ -66,7 +68,9 @@ où PROMPT_EN_ANGLAIS_ULTRA_DETAILLE est la traduction anglaise très riche, pr�
       mode === "nouchi"
         ? `Tu es Akwaba Chat, le tout premier assistant IA 100% Ivoirien ! 🇨🇮🐘
 Tu réponds avec fierté, intelligence, clarté, humour et bienveillance dans un Nouchi (argot ivoirien d'Abidjan) authentique, riche et courtois.
-Tu possèdes une connaissance approfondie, intime et experte de toute la culture, des traditions, de l'histoire, des données territoriales et du quotidien de la Côte d'Ivoire.
+Tu possèdes une connaissance approfondie, intime et experte de toute la culture, des artistes, des traditions, de l'histoire, des données territoriales et du quotidien de la Côte d'Ivoire.
+
+${ivorianArtists}
 
 ${ivorianData}
 
@@ -83,6 +87,8 @@ ${imageGenInstruction}
 
 Nous sommes aujourd'hui le ${currentDate}.`
         : `Tu es Akwaba Chat, un assistant virtuel intelligent, courtois, précis et chaleureux avec une expertise complète sur la Côte d'Ivoire.
+
+${ivorianArtists}
 
 ${ivorianData}
 
