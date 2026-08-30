@@ -34,7 +34,7 @@ export class UserRepository {
         avatarUrl: data.avatarUrl,
         settings: {
           create: {
-            defaultModel: "openai/gpt-4o-mini",
+            defaultModel: "openrouter/free",
             theme: "system",
           },
         },

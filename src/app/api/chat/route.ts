@@ -43,7 +43,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: validation.error.format() }, { status: 400 });
     }
 
-    const { content, conversationId: reqConvId, model, imageUrl, mode } = validation.data;
+    const { content, conversationId: reqConvId, model: rawModel, imageUrl, mode } = validation.data;
+
+    // Rediriger automatiquement les anciens modèles payants vers le modèle gratuit
+    const isFree = rawModel.endsWith(":free") || rawModel === "openrouter/free" || rawModel === "openrouter/auto";
+    const model = isFree ? rawModel : "openrouter/free";
 
     const currentDate = new Date().toLocaleDateString("fr-FR", {
       weekday: "long",

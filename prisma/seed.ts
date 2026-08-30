@@ -11,21 +11,44 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log("Seeding AI models...");
 
+  // Désactiver tous les anciens modèles (notamment les modèles payants)
+  await prisma.aiModel.updateMany({
+    data: { isActive: false, isDefault: false },
+  });
+
   const defaultModels = [
     {
-      slug: "openai/gpt-4o-mini",
-      name: "GPT-4o Mini",
-      provider: "OpenAI",
-      description: "Modèle rapide, intelligent et multimodal (Texte & Vision).",
+      slug: "openrouter/free",
+      name: "OpenRouter Free",
+      provider: "OpenRouter (Free)",
+      description: "Router automatique et intelligent 100% gratuit avec support Vision et Texte.",
       isDefault: true,
       isActive: true,
       supportsVision: true,
     },
     {
-      slug: "openrouter/free",
-      name: "OpenRouter Free",
-      provider: "OpenRouter",
-      description: "Router automatique de modèles 100% gratuits avec support Vision.",
+      slug: "nvidia/nemotron-3-super-120b-a12b:free",
+      name: "Nemotron 3 Super 120B",
+      provider: "NVIDIA (Free)",
+      description: "Modèle puissant de 120B paramètres, ultra-rapide et gratuit.",
+      isDefault: false,
+      isActive: true,
+      supportsVision: false,
+    },
+    {
+      slug: "minimax/minimax-m3:free",
+      name: "MiniMax M3",
+      provider: "MiniMax (Free)",
+      description: "Modèle gratuit très performant avec 1M de contexte et support Vision.",
+      isDefault: false,
+      isActive: true,
+      supportsVision: true,
+    },
+    {
+      slug: "dots-studio/dots-3-note-preview:free",
+      name: "Dots 3 Vision",
+      provider: "Dots Studio (Free)",
+      description: "Modèle multimodal gratuit pour l'analyse d'images et de notes.",
       isDefault: false,
       isActive: true,
       supportsVision: true,
@@ -34,34 +57,7 @@ async function main() {
       slug: "google/gemma-4-31b-it:free",
       name: "Gemma 4 31B Vision",
       provider: "Google (Free)",
-      description: "Modèle gratuit de Google capable d'analyser des images et du texte.",
-      isDefault: false,
-      isActive: true,
-      supportsVision: true,
-    },
-    {
-      slug: "nvidia/nemotron-nano-12b-v2-vl:free",
-      name: "Nemotron 12B VL",
-      provider: "NVIDIA (Free)",
-      description: "Modèle gratuit NVIDIA Vision-Language pour l'analyse d'images.",
-      isDefault: false,
-      isActive: true,
-      supportsVision: true,
-    },
-    {
-      slug: "meta-llama/llama-3.3-70b-instruct",
-      name: "Llama 3.3 70B",
-      provider: "Meta",
-      description: "Modèle open-source de pointe pour la génération de texte et raisonnement.",
-      isDefault: false,
-      isActive: true,
-      supportsVision: false,
-    },
-    {
-      slug: "anthropic/claude-3.5-sonnet",
-      name: "Claude 3.5 Sonnet",
-      provider: "Anthropic",
-      description: "Modèle d'excellence pour le code, la rédaction et l'analyse d'images.",
+      description: "Modèle gratuit de Google pour l'analyse d'images et texte.",
       isDefault: false,
       isActive: true,
       supportsVision: true,

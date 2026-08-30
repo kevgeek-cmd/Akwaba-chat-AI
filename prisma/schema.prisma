@@ -93,7 +93,7 @@ model Settings {
   id           String   @id @default(uuid())
   userId       String   @unique
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  defaultModel String   @default("openai/gpt-4o-mini")
+  defaultModel String   @default("openrouter/free")
   theme        String   @default("system")
   systemPrompt String?
   maxTokens    Int      @default(2048)

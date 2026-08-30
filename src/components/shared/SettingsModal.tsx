@@ -24,12 +24,11 @@ export function SettingsModal({
   if (!isOpen) return null;
 
   const models = [
-    { slug: "openai/gpt-4o-mini", name: "GPT-4o Mini", provider: "OpenAI", desc: "Rapide et multimodal (Texte & Vision)" },
-    { slug: "openrouter/free", name: "OpenRouter Free", provider: "OpenRouter (Free)", desc: "100% Gratuit - Support Vision & Texte" },
-    { slug: "google/gemma-4-31b-it:free", name: "Gemma 4 31B Vision", provider: "Google (Free)", desc: "100% Gratuit - Analyse d'images et texte" },
-    { slug: "nvidia/nemotron-nano-12b-v2-vl:free", name: "Nemotron 12B VL", provider: "NVIDIA (Free)", desc: "100% Gratuit - Vision-Language de NVIDIA" },
-    { slug: "meta-llama/llama-3.3-70b-instruct", name: "Llama 3.3 70B", provider: "Meta", desc: "Puissant modèle Open-Source pour le texte" },
-    { slug: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet", provider: "Anthropic", desc: "Excellent pour le code et l'analyse d'images" },
+    { slug: "openrouter/free", name: "OpenRouter Free", provider: "OpenRouter (Free)", desc: "100% Gratuit - Auto-Router Vision & Texte" },
+    { slug: "nvidia/nemotron-3-super-120b-a12b:free", name: "Nemotron 3 Super 120B", provider: "NVIDIA (Free)", desc: "100% Gratuit - Modèle puissant 120B paramètres" },
+    { slug: "minimax/minimax-m3:free", name: "MiniMax M3", provider: "MiniMax (Free)", desc: "100% Gratuit - Vision & Texte avec 1M de contexte" },
+    { slug: "dots-studio/dots-3-note-preview:free", name: "Dots 3 Vision", provider: "Dots Studio (Free)", desc: "100% Gratuit - Analyse d'images & multimodal" },
+    { slug: "google/gemma-4-31b-it:free", name: "Gemma 4 31B Vision", provider: "Google (Free)", desc: "100% Gratuit - Modèle Google Vision & Texte" },
   ];
 
   const handleSave = () => {

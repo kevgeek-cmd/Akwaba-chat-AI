@@ -21,7 +21,7 @@ interface HeaderProps {
 }
 
 export function Header({
-  currentModel = "openai/gpt-4o-mini",
+  currentModel = "openrouter/free",
   availableModels = [],
   onSelectModel,
   toneMode = "nouchi",

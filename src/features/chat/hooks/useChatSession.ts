@@ -12,19 +12,18 @@ export interface ModelItem {
 }
 
 const DEFAULT_MODELS: ModelItem[] = [
-  { slug: "openai/gpt-4o-mini", name: "GPT-4o Mini", provider: "OpenAI", supportsVision: true },
   { slug: "openrouter/free", name: "OpenRouter Free", provider: "OpenRouter (Free)", supportsVision: true },
+  { slug: "nvidia/nemotron-3-super-120b-a12b:free", name: "Nemotron 3 Super 120B", provider: "NVIDIA (Free)", supportsVision: false },
+  { slug: "minimax/minimax-m3:free", name: "MiniMax M3", provider: "MiniMax (Free)", supportsVision: true },
+  { slug: "dots-studio/dots-3-note-preview:free", name: "Dots 3 Vision", provider: "Dots Studio (Free)", supportsVision: true },
   { slug: "google/gemma-4-31b-it:free", name: "Gemma 4 31B Vision", provider: "Google (Free)", supportsVision: true },
-  { slug: "nvidia/nemotron-nano-12b-v2-vl:free", name: "Nemotron 12B VL", provider: "NVIDIA (Free)", supportsVision: true },
-  { slug: "meta-llama/llama-3.3-70b-instruct", name: "Llama 3.3 70B", provider: "Meta", supportsVision: false },
-  { slug: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet", provider: "Anthropic", supportsVision: true },
 ];
 
 export function useChatSession() {
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageData[]>([]);
-  const [currentModel, setCurrentModel] = useState("openai/gpt-4o-mini");
+  const [currentModel, setCurrentModel] = useState("openrouter/free");
   const [isLoading, setIsLoading] = useState(false);
   const [toneMode, setToneMode] = useState<"nouchi" | "standard">("nouchi");
   const [modelsList, setModelsList] = useState<ModelItem[]>(DEFAULT_MODELS);
@@ -64,6 +63,10 @@ export function useChatSession() {
           const mData = await modelsRes.json();
           if (Array.isArray(mData) && mData.length > 0) {
             setModelsList(mData);
+            setCurrentModel((prev) => {
+              const exists = mData.some((m: ModelItem) => m.slug === prev);
+              return exists ? prev : (mData[0]?.slug || "openrouter/free");
+            });
           }
         }
       } catch (err) {
