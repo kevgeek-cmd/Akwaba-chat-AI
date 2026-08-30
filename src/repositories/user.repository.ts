@@ -34,7 +34,7 @@ export class UserRepository {
         avatarUrl: data.avatarUrl,
         settings: {
           create: {
-            defaultModel: "openrouter/free",
+            defaultModel: "minimax/minimax-m3:free",
             theme: "system",
           },
         },

@@ -3,7 +3,7 @@ import { z } from "zod";
 export const sendMessageSchema = z.object({
   content: z.string().trim().min(1, "Le message ne peut pas être vide"),
   conversationId: z.string().uuid().optional(),
-  model: z.string().default("openrouter/free"),
+  model: z.string().default("minimax/minimax-m3:free"),
   imageUrl: z.string().url().optional(),
   mode: z.enum(["nouchi", "standard"]).default("nouchi"),
 });

@@ -24,10 +24,9 @@ export function SettingsModal({
   if (!isOpen) return null;
 
   const models = [
-    { slug: "openrouter/free", name: "OpenRouter Free", provider: "OpenRouter (Free)", desc: "100% Gratuit - Auto-Router Vision & Texte" },
-    { slug: "nvidia/nemotron-3-super-120b-a12b:free", name: "Nemotron 3 Super 120B", provider: "NVIDIA (Free)", desc: "100% Gratuit - Modèle puissant 120B paramètres" },
-    { slug: "minimax/minimax-m3:free", name: "MiniMax M3", provider: "MiniMax (Free)", desc: "100% Gratuit - Vision & Texte avec 1M de contexte" },
-    { slug: "dots-studio/dots-3-note-preview:free", name: "Dots 3 Vision", provider: "Dots Studio (Free)", desc: "100% Gratuit - Analyse d'images & multimodal" },
+    { slug: "minimax/minimax-m3:free", name: "MiniMax M3 (Recommandé)", provider: "MiniMax (Free)", desc: "100% Gratuit - Ultra-rapide (~1s), Nouchi & Français parfaits, Vision" },
+    { slug: "openrouter/free", name: "Auto-Router Free", provider: "OpenRouter (Free)", desc: "100% Gratuit - Sélection automatique de modèle" },
+    { slug: "nvidia/nemotron-3.5-lightning:free", name: "Nemotron 3.5 Lightning", provider: "NVIDIA (Free)", desc: "100% Gratuit - Modèle de raisonnement NVIDIA" },
     { slug: "google/gemma-4-31b-it:free", name: "Gemma 4 31B Vision", provider: "Google (Free)", desc: "100% Gratuit - Modèle Google Vision & Texte" },
   ];
 

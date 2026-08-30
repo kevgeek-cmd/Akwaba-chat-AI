@@ -11,6 +11,9 @@ import { formatNouchiLexiconForPrompt } from "@/lib/knowledge/nouchi-dictionary"
 import { formatIvorianDataForPrompt } from "@/lib/knowledge/ivorian-data";
 import { formatIvorianArtistsForPrompt } from "@/lib/knowledge/ivorian-artists";
 
+export const maxDuration = 60;
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
 
@@ -45,9 +48,10 @@ export async function POST(req: NextRequest) {
 
     const { content, conversationId: reqConvId, model: rawModel, imageUrl, mode } = validation.data;
 
-    // Rediriger automatiquement les anciens modèles payants vers le modèle gratuit
-    const isFree = rawModel.endsWith(":free") || rawModel === "openrouter/free" || rawModel === "openrouter/auto";
-    const model = isFree ? rawModel : "openrouter/free";
+    // Modèle par défaut ultra-rapide (minimax-m3 : ~1s, 1M contexte, multimodal, nouchi fluide)
+    // Éviter openrouter/free générique qui route vers des modèles reasoning lents (75s+)
+    const isFreeExplicit = rawModel.endsWith(":free") && rawModel !== "openrouter/free";
+    const model = isFreeExplicit ? rawModel : "minimax/minimax-m3:free";
 
     const currentDate = new Date().toLocaleDateString("fr-FR", {
       weekday: "long",
@@ -124,13 +128,16 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
 
     // 3. Préparer l'historique des messages pour la passerelle IA
     const conversationWithMessages = await ConversationRepository.findById(conversation.id, dbUser.id);
-    const existingMessages = conversationWithMessages?.messages || [];
+    const allMessages = conversationWithMessages?.messages || [];
+    // Exclure le tout dernier message qui vient d'être inséré pour éviter de le doubler
+    const previousMessages = allMessages.slice(0, -1);
+
     const formattedMessages: ChatMessagePayload[] = [
       {
         role: "system",
         content: systemPromptContent,
       },
-      ...existingMessages.map((m: { role: string; content: string }) => ({
+      ...previousMessages.map((m: { role: string; content: string }) => ({
         role: (m.role === "USER" ? "user" : "assistant") as "user" | "assistant",
         content: m.content,
       })),
@@ -214,11 +221,19 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
 
         const executionTime = Date.now() - startTime;
 
+        // Nettoyer les éventuelles traces de raisonnement des modèles reasoning (ex: <think>...</think>)
+        const sanitizedContent = fullResponseContent
+          .replace(/<think>[\s\S]*?<\/think>/gi, "")
+          .replace(/^Here'?s a thinking process:[\s\S]*?(?=\n\n(?:[A-ZÀ-ÿ]|"[A-ZÀ-ÿ]|Salut|Akwaba|Bonjour|Yo|Ça))/i, "")
+          .trim();
+
+        const finalContent = sanitizedContent || fullResponseContent;
+
         // Save AI Message in DB
         const savedMessage = await MessageRepository.create({
           conversationId: conversation.id,
           role: "ASSISTANT",
-          content: fullResponseContent,
+          content: finalContent,
           modelUsed: gatewayResult.modelUsed,
           executionTime,
         });
@@ -250,8 +265,9 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
     return new NextResponse(customStream, {
       headers: {
         "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
+        "Cache-Control": "no-cache, no-transform",
         Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
       },
     });
   } catch (error: unknown) {

@@ -21,7 +21,7 @@ interface HeaderProps {
 }
 
 export function Header({
-  currentModel = "openrouter/free",
+  currentModel = "minimax/minimax-m3:free",
   availableModels = [],
   onSelectModel,
   toneMode = "nouchi",
