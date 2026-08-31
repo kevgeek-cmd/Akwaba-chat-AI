@@ -21,7 +21,7 @@ interface HeaderProps {
 }
 
 export function Header({
-  currentModel = "minimax/minimax-m3:free",
+  currentModel = "minimax/minimax-m2.7:free",
   availableModels = [],
   onSelectModel,
   toneMode = "nouchi",

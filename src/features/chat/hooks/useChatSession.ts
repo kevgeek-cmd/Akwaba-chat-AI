@@ -9,20 +9,21 @@ export interface ModelItem {
   name: string;
   provider: string;
   supportsVision?: boolean;
+  isDefault?: boolean;
 }
 
 const DEFAULT_MODELS: ModelItem[] = [
-  { slug: "minimax/minimax-m3:free", name: "MiniMax M3 (Rapide)", provider: "MiniMax (Free)", supportsVision: true },
+  { slug: "minimax/minimax-m2.7:free", name: "MiniMax M2.7 (Recommandé)", provider: "MiniMax (Free)", supportsVision: false },
+  { slug: "dots-studio/dots-3-note-preview:free", name: "Dots 3 Vision", provider: "Dots Studio (Free)", supportsVision: true },
   { slug: "openrouter/free", name: "Auto-Router Free", provider: "OpenRouter (Free)", supportsVision: true },
   { slug: "nvidia/nemotron-3.5-lightning:free", name: "Nemotron 3.5 Lightning", provider: "NVIDIA (Free)", supportsVision: false },
-  { slug: "google/gemma-4-31b-it:free", name: "Gemma 4 31B Vision", provider: "Google (Free)", supportsVision: true },
 ];
 
 export function useChatSession() {
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageData[]>([]);
-  const [currentModel, setCurrentModel] = useState("minimax/minimax-m3:free");
+  const [currentModel, setCurrentModel] = useState("minimax/minimax-m2.7:free");
   const [isLoading, setIsLoading] = useState(false);
   const [toneMode, setToneMode] = useState<"nouchi" | "standard">("nouchi");
   const [modelsList, setModelsList] = useState<ModelItem[]>(DEFAULT_MODELS);
@@ -63,11 +64,12 @@ export function useChatSession() {
           if (Array.isArray(mData) && mData.length > 0) {
             setModelsList(mData);
             setCurrentModel((prev) => {
-              if (prev === "openrouter/free" && mData.some((m: ModelItem) => m.slug === "minimax/minimax-m3:free")) {
-                return "minimax/minimax-m3:free";
+              // Si le modèle précédent était l'ancien modèle défaillant minimax-m3, basculer sur m2.7
+              if (prev === "minimax/minimax-m3:free") {
+                return "minimax/minimax-m2.7:free";
               }
               const exists = mData.some((m: ModelItem) => m.slug === prev);
-              return exists ? prev : (mData[0]?.slug || "minimax/minimax-m3:free");
+              return exists ? prev : (mData.find((m: ModelItem) => m.isDefault)?.slug || mData[0]?.slug || "minimax/minimax-m2.7:free");
             });
           }
         }
@@ -190,12 +192,14 @@ export function useChatSession() {
                     )
                   );
                 } else if (data.type === "done") {
+                  const verifiedContent = currentStreamText || data.content || "";
                   setMessages((prev) =>
                     prev.map((m) =>
                       m.id === aiMessageId
                         ? {
                             ...m,
                             id: data.messageId || aiMessageId,
+                            content: m.content || verifiedContent,
                             executionTime: data.executionTime,
                             modelUsed:
                               modelsList.find((mod) => mod.slug === data.modelUsed)?.name ||

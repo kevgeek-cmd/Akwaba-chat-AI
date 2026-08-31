@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendMessageSchema } from "@/lib/validators";
-import { ChatMessagePayload } from "@/services/ai.service";
+import { ChatMessagePayload, AIService } from "@/services/ai.service";
 import { AIGatewayService } from "@/services/ai-gateway.service";
 import { ConversationRepository } from "@/repositories/conversation.repository";
 import { MessageRepository } from "@/repositories/message.repository";
@@ -48,10 +48,13 @@ export async function POST(req: NextRequest) {
 
     const { content, conversationId: reqConvId, model: rawModel, imageUrl, mode } = validation.data;
 
-    // Modèle par défaut ultra-rapide (minimax-m3 : ~1s, 1M contexte, multimodal, nouchi fluide)
-    // Éviter openrouter/free générique qui route vers des modèles reasoning lents (75s+)
-    const isFreeExplicit = rawModel.endsWith(":free") && rawModel !== "openrouter/free";
-    const model = isFreeExplicit ? rawModel : "minimax/minimax-m3:free";
+    // Modèle par défaut ultra-rapide et fiable (vérifié en direct)
+    // Si une image est fournie -> modèle multimodal (dots-3-note-preview:free)
+    // Sinon -> modèle Nouchi rapide (minimax-m2.7:free ~1.5s)
+    let model = rawModel;
+    if (!model || model === "minimax/minimax-m3:free" || model === "openrouter/free") {
+      model = imageUrl ? "dots-studio/dots-3-note-preview:free" : "minimax/minimax-m2.7:free";
+    }
 
     const currentDate = new Date().toLocaleDateString("fr-FR", {
       weekday: "long",
@@ -152,7 +155,7 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
       },
     ];
 
-    // 4. Appeler la passerelle IA (OmniRoute avec fallback automatique vers OpenRouter)
+    // 4. Appeler la passerelle IA (avec fallback automatique en cascade)
     const gatewayResult = await AIGatewayService.streamCompletion({
       model,
       messages: formattedMessages,
@@ -197,6 +200,12 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
                 continue;
               }
 
+              // Détecter les réponses d'erreur directes OpenRouter JSON
+              if (trimmed.startsWith('{"error":') || trimmed.startsWith('data: {"error":')) {
+                logger.warn("ChatAPI", "Error object detected in OpenRouter stream", { raw: trimmed });
+                continue;
+              }
+
               if (trimmed.startsWith("data: ")) {
                 try {
                   const parsed = JSON.parse(trimmed.slice(6));
@@ -217,6 +226,38 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
           logger.error("ChatAPI", "Error while reading response stream", {
             error: streamReadErr instanceof Error ? streamReadErr.message : String(streamReadErr),
           });
+        }
+
+        // Si pour une raison quelconque le stream est resté vide, faire un secours immédiat
+        if (!fullResponseContent.trim()) {
+          logger.warn("ChatAPI", "Stream produced empty content. Triggering emergency fallback generation.");
+          try {
+            const fallbackText = await AIService.quickFallbackCompletion({
+              messages: formattedMessages,
+              model: gatewayResult.modelUsed,
+            });
+
+            if (fallbackText) {
+              fullResponseContent = fallbackText;
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: fallbackText })}\n\n`)
+              );
+            }
+          } catch (e) {
+            logger.error("ChatAPI", "Emergency fallback generation failed", { error: String(e) });
+          }
+        }
+
+        // Si même le secours n'a rien renvoyé, afficher un message d'assistance chaleureux et courtois
+        if (!fullResponseContent.trim()) {
+          const defaultApology =
+            mode === "nouchi"
+              ? "Ahi mon ami ! Les serveurs sont un peu calés en ce moment même. Repose ta question ou réessaie dans un instant, on est ensemble ! 🇨🇮🐘"
+              : "Désolé, les serveurs d'intelligence artificielle rencontrent une forte affluence en ce moment. Veuillez réessayer dans quelques instants.";
+          fullResponseContent = defaultApology;
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: defaultApology })}\n\n`)
+          );
         }
 
         const executionTime = Date.now() - startTime;
@@ -246,7 +287,7 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
           executionTimeMs: executionTime,
         });
 
-        // Send final done event with full message metadata
+        // Send final done event with full message metadata and content confirmation
         controller.enqueue(
           encoder.encode(
             `data: ${JSON.stringify({
@@ -254,6 +295,7 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
               messageId: savedMessage.id,
               executionTime,
               modelUsed: gatewayResult.modelUsed,
+              content: finalContent,
             })}\n\n`
           )
         );

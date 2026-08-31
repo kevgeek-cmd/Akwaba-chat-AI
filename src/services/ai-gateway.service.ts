@@ -48,16 +48,16 @@ export class AIGatewayService {
 
     // 1. Direct mode if AI Gateway feature flag is disabled
     if (!gatewayEnabled) {
-      logger.debug("AIGatewayService", "AI Gateway feature flag is disabled. Using Direct OpenRouter provider.", {
+      logger.debug("AIGatewayService", "AI Gateway feature flag is disabled. Using Direct OpenRouter provider with automated fallback cascade.", {
         model: options.model,
       });
 
-      const response = await AIService.streamCompletion(options);
+      const result = await AIService.streamCompletionWithFallback(options);
       return {
-        response,
+        response: result.response,
         providerUsed: "openrouter-direct",
-        fallbackOccurred: false,
-        modelUsed: options.model,
+        fallbackOccurred: result.fallbackOccurred,
+        modelUsed: result.modelUsed,
       };
     }
 
@@ -128,19 +128,19 @@ export class AIGatewayService {
         reason: errorMsg,
       });
 
-      // 3. Automated Fallback to existing OpenRouter provider
+      // 3. Automated Fallback to existing OpenRouter provider with cascade
       try {
-        const fallbackResponse = await AIService.streamCompletion(options);
+        const fallbackResult = await AIService.streamCompletionWithFallback(options);
 
         logger.info("AIGatewayService", "Fallback to Direct OpenRouter succeeded.", {
-          model: options.model,
+          model: fallbackResult.modelUsed,
         });
 
         return {
-          response: fallbackResponse,
+          response: fallbackResult.response,
           providerUsed: "openrouter-fallback",
           fallbackOccurred: true,
-          modelUsed: options.model,
+          modelUsed: fallbackResult.modelUsed,
         };
       } catch (fallbackError: unknown) {
         const fbMsg = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);

@@ -93,7 +93,7 @@ model Settings {
   id           String   @id @default(uuid())
   userId       String   @unique
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  defaultModel String   @default("minimax/minimax-m3:free")
+  defaultModel String   @default("minimax/minimax-m2.7:free")
   theme        String   @default("system")
   systemPrompt String?
   maxTokens    Int      @default(2048)

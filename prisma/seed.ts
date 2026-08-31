@@ -18,11 +18,20 @@ async function main() {
 
   const defaultModels = [
     {
-      slug: "minimax/minimax-m3:free",
-      name: "MiniMax M3 (Recommandé)",
+      slug: "minimax/minimax-m2.7:free",
+      name: "MiniMax M2.7 (Recommandé)",
       provider: "MiniMax (Free)",
-      description: "Modèle gratuit ultra-rapide (~1s), Nouchi authentique, 1M de contexte et support Vision.",
+      description: "Modèle gratuit ultra-rapide (~1.5s), Nouchi authentique, contexte 196k.",
       isDefault: true,
+      isActive: true,
+      supportsVision: false,
+    },
+    {
+      slug: "dots-studio/dots-3-note-preview:free",
+      name: "Dots 3 Vision",
+      provider: "Dots Studio (Free)",
+      description: "Modèle multimodal gratuit pour l'analyse d'images et texte.",
+      isDefault: false,
       isActive: true,
       supportsVision: true,
     },
@@ -36,22 +45,13 @@ async function main() {
       supportsVision: true,
     },
     {
-      slug: "dots-studio/dots-3-note-preview:free",
-      name: "Dots 3 Vision",
-      provider: "Dots Studio (Free)",
-      description: "Modèle multimodal gratuit pour l'analyse d'images et de notes.",
+      slug: "nvidia/nemotron-3.5-lightning:free",
+      name: "Nemotron 3.5 Lightning",
+      provider: "NVIDIA (Free)",
+      description: "Modèle de raisonnement NVIDIA rapide.",
       isDefault: false,
       isActive: true,
-      supportsVision: true,
-    },
-    {
-      slug: "google/gemma-4-31b-it:free",
-      name: "Gemma 4 31B Vision",
-      provider: "Google (Free)",
-      description: "Modèle gratuit de Google pour l'analyse d'images et texte.",
-      isDefault: false,
-      isActive: true,
-      supportsVision: true,
+      supportsVision: false,
     },
   ];
 

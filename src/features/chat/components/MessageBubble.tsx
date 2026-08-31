@@ -174,6 +174,22 @@ export function MessageBubble({ message, onFeedback, onRegenerate }: MessageBubb
                 {message.content}
               </ReactMarkdown>
             </div>
+          ) : message.executionTime ? (
+            <div className="text-sm text-slate-600 dark:text-slate-300 py-2 space-y-2">
+              <p className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-medium text-xs sm:text-sm">
+                <span>⚠️ La connexion a été interrompue avant la réception complète.</span>
+              </p>
+              {onRegenerate && (
+                <button
+                  type="button"
+                  onClick={onRegenerate}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-akwaba-green hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all duration-200 active:scale-95"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Régénérer la réponse</span>
+                </button>
+              )}
+            </div>
           ) : (
             <ElephantLoader />
           )}

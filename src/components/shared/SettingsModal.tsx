@@ -24,10 +24,10 @@ export function SettingsModal({
   if (!isOpen) return null;
 
   const models = [
-    { slug: "minimax/minimax-m3:free", name: "MiniMax M3 (Recommandé)", provider: "MiniMax (Free)", desc: "100% Gratuit - Ultra-rapide (~1s), Nouchi & Français parfaits, Vision" },
-    { slug: "openrouter/free", name: "Auto-Router Free", provider: "OpenRouter (Free)", desc: "100% Gratuit - Sélection automatique de modèle" },
+    { slug: "minimax/minimax-m2.7:free", name: "MiniMax M2.7 (Recommandé)", provider: "MiniMax (Free)", desc: "100% Gratuit - Réponse ultra-rapide (~1.5s), Nouchi authentique et fluide" },
+    { slug: "dots-studio/dots-3-note-preview:free", name: "Dots 3 Vision", provider: "Dots Studio (Free)", desc: "100% Gratuit - Analyse d'images et Vision multi-format" },
+    { slug: "openrouter/free", name: "Auto-Router Free", provider: "OpenRouter (Free)", desc: "100% Gratuit - Sélection et routage automatique" },
     { slug: "nvidia/nemotron-3.5-lightning:free", name: "Nemotron 3.5 Lightning", provider: "NVIDIA (Free)", desc: "100% Gratuit - Modèle de raisonnement NVIDIA" },
-    { slug: "google/gemma-4-31b-it:free", name: "Gemma 4 31B Vision", provider: "Google (Free)", desc: "100% Gratuit - Modèle Google Vision & Texte" },
   ];
 
   const handleSave = () => {
