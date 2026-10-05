@@ -110,7 +110,12 @@ export function useChatSession() {
 
   // Envoi d'un message utilisateur + streaming réponse IA
   const handleSendMessage = useCallback(
-    async (text: string, imageUrl?: string) => {
+    async (
+      text: string,
+      imageUrl?: string,
+      workMode: "normal" | "deep-research" | "scraping" = "normal",
+      targetUrl?: string
+    ) => {
       if (!text.trim() && !imageUrl) return;
 
       // 1. Message Optimiste Utilisateur
@@ -125,16 +130,23 @@ export function useChatSession() {
       setMessages((prev) => [...prev, userMsg]);
       setIsLoading(true);
 
-      // 2. Placeholder Message IA avec état initial Mascot (Walking)
+      // 2. Placeholder Message IA avec état initial Mascot adapté au mode
       const aiMessageId = `temp-ai-${crypto.randomUUID()}`;
+      const initialMascotMsg =
+        workMode === "deep-research"
+          ? "Analyse de la question..."
+          : workMode === "scraping"
+          ? "Vérification de la page..."
+          : "Je commence la recherche...";
+
       const aiMsgPlaceholder: MessageData = {
         id: aiMessageId,
         role: "ASSISTANT",
         content: "",
         modelUsed: modelsList.find((m) => m.slug === currentModel)?.name || currentModel,
         mascotState: "walking",
-        mascotProgress: 15,
-        mascotMessage: "Je commence la recherche...",
+        mascotProgress: workMode === "deep-research" ? 10 : 15,
+        mascotMessage: initialMascotMsg,
       };
 
       setMessages((prev) => [...prev, aiMsgPlaceholder]);
@@ -150,6 +162,8 @@ export function useChatSession() {
             model: currentModel,
             imageUrl,
             mode: toneMode,
+            workMode,
+            targetUrl,
           }),
           signal: abortControllerRef.current.signal,
         });

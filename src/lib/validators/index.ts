@@ -6,6 +6,8 @@ export const sendMessageSchema = z.object({
   model: z.string().default("minimax/minimax-m2.7:free"),
   imageUrl: z.string().url().optional(),
   mode: z.enum(["nouchi", "standard"]).default("nouchi"),
+  workMode: z.enum(["normal", "deep-research", "scraping"]).default("normal"),
+  targetUrl: z.string().optional(),
 });
 
 export const renameConversationSchema = z.object({

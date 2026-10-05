@@ -52,4 +52,7 @@ supabase/.branches/
 # test files
 test_*.jpg
 
+# plugins autonomes
+.agents/plugins/
+
 

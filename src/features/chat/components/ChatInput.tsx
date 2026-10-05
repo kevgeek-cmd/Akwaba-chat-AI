@@ -1,10 +1,29 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Image as ImageIcon, Send, Square, X, Smile, Mic, MicOff } from "lucide-react";
+import {
+  Image as ImageIcon,
+  Send,
+  Square,
+  X,
+  Smile,
+  Mic,
+  MicOff,
+  Search,
+  Globe,
+  AlertCircle,
+} from "lucide-react";
+import { UrlValidator } from "@/services/scraping/url-validator";
+
+export type WorkMode = "normal" | "deep-research" | "scraping";
 
 interface ChatInputProps {
-  onSendMessage: (text: string, imageUrl?: string) => void;
+  onSendMessage: (
+    text: string,
+    imageUrl?: string,
+    workMode?: WorkMode,
+    targetUrl?: string
+  ) => void;
   isLoading?: boolean;
   onStopGeneration?: () => void;
 }
@@ -25,6 +44,8 @@ export function ChatInput({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [workMode, setWorkMode] = useState<WorkMode>("normal");
+  const [validationWarning, setValidationWarning] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -32,6 +53,11 @@ export function ChatInput({
   const recognitionRef = useRef<any>(null);
 
   const MAX_CHARS = 2000;
+
+  const toggleWorkMode = (mode: "deep-research" | "scraping") => {
+    setWorkMode((prev) => (prev === mode ? "normal" : mode));
+    setValidationWarning(null);
+  };
 
   // Auto-resize textarea height as user types
   useEffect(() => {
@@ -98,11 +124,25 @@ export function ChatInput({
 
   const handleSend = () => {
     if ((!message.trim() && !imageUrl) || isLoading) return;
+
+    let targetUrl: string | undefined = undefined;
+    if (workMode === "scraping") {
+      const detected = UrlValidator.extractUrlFromText(message);
+      if (!detected) {
+        setValidationWarning("Ajoute une URL valide (ex: https://example.com) pour utiliser le mode Scraping.");
+        return;
+      }
+      targetUrl = detected;
+    }
+
+    setValidationWarning(null);
+
     if (isListening && recognitionRef.current) {
       recognitionRef.current.stop();
       setIsListening(false);
     }
-    onSendMessage(message.trim(), imageUrl || undefined);
+
+    onSendMessage(message.trim(), imageUrl || undefined, workMode, targetUrl);
     setMessage("");
     setImageUrl(null);
     setImagePreview(null);
@@ -199,8 +239,90 @@ export function ChatInput({
         </>
       )}
 
+      {/* Alerte si URL manquante en mode Scraping */}
+      {validationWarning && (
+        <div className="mb-2.5 p-2.5 px-3 rounded-2xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs flex items-center justify-between gap-2 shadow-sm animate-fade-in">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span className="font-medium">{validationWarning}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setValidationWarning(null)}
+            className="p-1 hover:bg-amber-100 dark:hover:bg-amber-900 rounded-lg text-amber-700 dark:text-amber-300 transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Mode Selector Buttons (Recherche Approfondie / Scraping) */}
+      <div className="flex items-center justify-center sm:justify-start gap-2.5 mb-2.5 flex-wrap">
+        {/* Bouton 1 : Recherche Approfondie */}
+        <button
+          type="button"
+          onClick={() => toggleWorkMode("deep-research")}
+          title="Recherche plusieurs sources et analyse les informations avant de répondre."
+          className={`group px-4 py-2 rounded-full text-xs sm:text-sm flex items-center gap-2 border transition-all duration-200 cursor-pointer ${
+            workMode === "deep-research"
+              ? "bg-emerald-50 dark:bg-emerald-950/60 border-akwaba-green text-akwaba-green dark:text-emerald-300 font-semibold ring-2 ring-emerald-500/20 shadow-sm"
+              : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200/90 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-750 shadow-sm hover:shadow"
+          }`}
+        >
+          <Search
+            className={`w-3.5 h-3.5 transition-transform group-hover:scale-110 ${
+              workMode === "deep-research" ? "text-akwaba-green" : "text-slate-500 dark:text-slate-400"
+            }`}
+          />
+          <span>Recherche approfondie</span>
+          {workMode === "deep-research" && (
+            <span className="w-4 h-4 rounded-full bg-akwaba-green text-white flex items-center justify-center text-[10px] ml-0.5 animate-scale-in">
+              ✓
+            </span>
+          )}
+        </button>
+
+        {/* Bouton 2 : Scraping */}
+        <button
+          type="button"
+          onClick={() => toggleWorkMode("scraping")}
+          title="Analyse le contenu d'une page web accessible."
+          className={`group px-4 py-2 rounded-full text-xs sm:text-sm flex items-center gap-2 border transition-all duration-200 cursor-pointer ${
+            workMode === "scraping"
+              ? "bg-orange-50 dark:bg-orange-950/60 border-akwaba-orange text-orange-700 dark:text-orange-300 font-semibold ring-2 ring-orange-500/20 shadow-sm"
+              : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200/90 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-750 shadow-sm hover:shadow"
+          }`}
+        >
+          <Globe
+            className={`w-3.5 h-3.5 transition-transform group-hover:scale-110 ${
+              workMode === "scraping" ? "text-akwaba-orange" : "text-slate-500 dark:text-slate-400"
+            }`}
+          />
+          <span>Scraping</span>
+          {workMode === "scraping" && (
+            <span className="w-4 h-4 rounded-full bg-akwaba-orange text-white flex items-center justify-center text-[10px] ml-0.5 animate-scale-in">
+              ✓
+            </span>
+          )}
+        </button>
+
+        {/* Indicateur de mode actif */}
+        {workMode === "scraping" && (
+          <span className="text-[11px] text-orange-600 dark:text-orange-400 flex items-center gap-1.5 animate-fade-in sm:ml-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-akwaba-orange animate-ping" />
+            Entrez une URL à analyser
+          </span>
+        )}
+        {workMode === "deep-research" && (
+          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 animate-fade-in sm:ml-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-akwaba-green animate-ping" />
+            Recherche multi-sources activée
+          </span>
+        )}
+      </div>
+
       {/* Main Input Card Floating Container */}
-      <div className="relative bg-white dark:bg-slate-800 rounded-[28px] border border-slate-200/80 dark:border-slate-700/80 shadow-lg shadow-slate-200/50 dark:shadow-none p-2.5 flex items-center gap-2 transition-all focus-within:border-akwaba-green focus-within:ring-2 focus-within:ring-[#057A55]/10">
+      <div className="relative bg-white dark:bg-slate-800 rounded-[28px] border border-slate-200/80 dark:border-slate-700/80 shadow-lg shadow-slate-200/50 dark:shadow-none p-2.5 flex items-center gap-2 transition-all focus-within:border-akwaba-green focus-within:ring-2 focus-within:ring-akwaba-green/10">
         {/* Hidden File Input */}
         <input
           type="file"
@@ -258,7 +380,15 @@ export function ChatInput({
           value={message}
           onChange={(e) => setMessage(e.target.value.slice(0, MAX_CHARS))}
           onKeyDown={handleKeyDown}
-          placeholder={isListening ? "Dictée en cours..." : "Écrivez votre message..."}
+          placeholder={
+            isListening
+              ? "Dictée en cours..."
+              : workMode === "scraping"
+              ? "Entrez une URL pour analyser son contenu (ex: https://example.com)..."
+              : workMode === "deep-research"
+              ? "Posez votre question pour une recherche web approfondie..."
+              : "Écrivez votre message..."
+          }
           rows={1}
           className="w-full bg-transparent text-slate-800 dark:text-slate-100 placeholder-slate-400 text-sm sm:text-base focus:outline-none resize-none min-h-6 max-h-40 py-1"
         />

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { sendMessageSchema } from "@/lib/validators";
 import { ChatMessagePayload, AIService } from "@/services/ai.service";
 import { AIGatewayService } from "@/services/ai-gateway.service";
+import { DeepResearchService } from "@/services/research/deep-research.service";
+import { ScrapingService } from "@/services/scraping/scraping.service";
+import { UrlValidator } from "@/services/scraping/url-validator";
 import { ConversationRepository } from "@/repositories/conversation.repository";
 import { MessageRepository } from "@/repositories/message.repository";
 import { UserRepository } from "@/repositories/user.repository";
@@ -46,7 +49,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: validation.error.format() }, { status: 400 });
     }
 
-    const { content, conversationId: reqConvId, model: rawModel, imageUrl, mode } = validation.data;
+    const {
+      content,
+      conversationId: reqConvId,
+      model: rawModel,
+      imageUrl,
+      mode,
+      workMode = "normal",
+      targetUrl,
+    } = validation.data;
 
     // Modèle par défaut ultra-rapide et fiable (vérifié en direct)
     // Si une image est fournie -> modèle multimodal (dots-3-note-preview:free)
@@ -155,15 +166,7 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
       },
     ];
 
-    // 4. Appeler la passerelle IA (avec fallback automatique en cascade)
-    const gatewayResult = await AIGatewayService.streamCompletion({
-      model,
-      messages: formattedMessages,
-    });
-
-    const aiResponseStream = gatewayResult.response;
-
-    // 5. Transformer le stream HTTP vers le client SSE + Enregistrement en DB à la fin du stream
+    // 4. Initialisation du flux SSE réactif avec intégration de la progression de la mascotte
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     let fullResponseContent = "";
@@ -175,29 +178,329 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
           encoder.encode(`data: ${JSON.stringify({ type: "meta", conversationId: conversation.id })}\n\n`)
         );
 
-        // 1. Étape WALKING (15%) : Début de prise en charge de la requête
-        controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({
-              type: "progress",
-              state: "walking",
-              progress: 15,
-              message: "Je commence la recherche...",
-            })}\n\n`
-          )
-        );
+        let activeMessages: ChatMessagePayload[] = [...formattedMessages];
+        let citationsToAppend = "";
 
-        // 2. Étape RUNNING (38%) : Connexion au modèle & passerelle IA
-        controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({
-              type: "progress",
-              state: "running",
-              progress: 38,
-              message: "J’accélère !",
-            })}\n\n`
-          )
-        );
+        // ==========================================
+        // GESTION DU MODE : RECHERCHE APPROFONDIE
+        // ==========================================
+        if (workMode === "deep-research") {
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                type: "progress",
+                state: "walking",
+                progress: 10,
+                message: "Analyse de la question...",
+              })}\n\n`
+            )
+          );
+
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                type: "progress",
+                state: "running",
+                progress: 25,
+                message: "Recherche de sources pertinentes...",
+              })}\n\n`
+            )
+          );
+
+          try {
+            const researchResult = await DeepResearchService.execute(content, (step) => {
+              if (step === "sources_collected") {
+                controller.enqueue(
+                  encoder.encode(
+                    `data: ${JSON.stringify({
+                      type: "progress",
+                      state: "running",
+                      progress: 50,
+                      message: "Collecte des informations sur le web...",
+                    })}\n\n`
+                  )
+                );
+              } else if (step === "cross_checking") {
+                controller.enqueue(
+                  encoder.encode(
+                    `data: ${JSON.stringify({
+                      type: "progress",
+                      state: "searching",
+                      progress: 75,
+                      message: "Analyse et comparaison des sources...",
+                    })}\n\n`
+                  )
+                );
+              }
+            });
+
+            if (researchResult.sources.length > 0) {
+              controller.enqueue(
+                encoder.encode(
+                  `data: ${JSON.stringify({
+                    type: "progress",
+                    state: "searching",
+                    progress: 88,
+                    message: "Synthèse et préparation de la réponse...",
+                  })}\n\n`
+                )
+              );
+
+              citationsToAppend = researchResult.citationsMarkdown;
+
+              // Enrichir le prompt avec les sources réelles extraites
+              activeMessages = [
+                ...formattedMessages.slice(0, -1),
+                {
+                  role: "user",
+                  content: `${content}\n\n${researchResult.contextForPrompt}`,
+                },
+              ];
+            } else {
+              controller.enqueue(
+                encoder.encode(
+                  `data: ${JSON.stringify({
+                    type: "progress",
+                    state: "searching",
+                    progress: 80,
+                    message: "Aucune source externe trouvée, synthèse basée sur la base de connaissances...",
+                  })}\n\n`
+                )
+              );
+            }
+          } catch (researchErr) {
+            logger.error("ChatAPI", "Erreur lors de la recherche approfondie", { error: String(researchErr) });
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  type: "progress",
+                  state: "searching",
+                  progress: 80,
+                  message: "Poursuite de la réponse avec nos connaissances internes...",
+                })}\n\n`
+              )
+            );
+          }
+        }
+
+        // ==========================================
+        // GESTION DU MODE : SCRAPING WEB RESPONSABLE
+        // ==========================================
+        else if (workMode === "scraping") {
+          const detectedUrl = targetUrl || UrlValidator.extractUrlFromText(content);
+
+          if (!detectedUrl) {
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  type: "progress",
+                  state: "error",
+                  progress: 0,
+                  errorCode: "INVALID_URL",
+                  message: "Ajoute une URL valide pour utiliser le mode Scraping 🌐",
+                })}\n\n`
+              )
+            );
+
+            const helpText =
+              "⚠️ **Mode Scraping Activé**\n\n" +
+              "Pour que je puisse analyser une page web, veuillez inclure une adresse valide dans votre message.\n\n" +
+              "**Exemple d'utilisation :**\n" +
+              "- `https://example.com`\n" +
+              "- `Analyse cette page et résume-moi les points clés : https://example.com`";
+
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: helpText })}\n\n`));
+
+            const savedMsg = await MessageRepository.create({
+              conversationId: conversation.id,
+              role: "ASSISTANT",
+              content: helpText,
+              modelUsed: "Akwaba Scraping Validator",
+              executionTime: Date.now() - startTime,
+            });
+
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  type: "done",
+                  messageId: savedMsg.id,
+                  executionTime: Date.now() - startTime,
+                  modelUsed: "Akwaba Scraping Validator",
+                  content: helpText,
+                })}\n\n`
+              )
+            );
+
+            controller.close();
+            return;
+          }
+
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                type: "progress",
+                state: "walking",
+                progress: 15,
+                message: "Je vérifie la page et les autorisations...",
+              })}\n\n`
+            )
+          );
+
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                type: "progress",
+                state: "running",
+                progress: 40,
+                message: "Je récupère le contenu autorisé...",
+              })}\n\n`
+            )
+          );
+
+          const scrapeResult = await ScrapingService.scrapeUrl(detectedUrl);
+
+          if (!scrapeResult.success || !scrapeResult.page) {
+            const errCode = scrapeResult.errorCode || "FETCH_FAILED";
+            const errMsg = scrapeResult.error || "Impossible d'extraire cette page.";
+
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  type: "progress",
+                  state: "error",
+                  progress: 0,
+                  errorCode: errCode,
+                  message: errMsg,
+                })}\n\n`
+              )
+            );
+
+            const responseErrText = `❌ **Échec du scraping**\n\n${errMsg}\n\n*Conseil : Vérifiez que l'URL est publiquement accessible et ne nécessite pas de connexion ou de mot de passe.*`;
+
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: responseErrText })}\n\n`)
+            );
+
+            const savedMsg = await MessageRepository.create({
+              conversationId: conversation.id,
+              role: "ASSISTANT",
+              content: responseErrText,
+              modelUsed: "Akwaba Scraping Engine",
+              executionTime: Date.now() - startTime,
+            });
+
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  type: "done",
+                  messageId: savedMsg.id,
+                  executionTime: Date.now() - startTime,
+                  modelUsed: "Akwaba Scraping Engine",
+                  content: responseErrText,
+                })}\n\n`
+              )
+            );
+
+            controller.close();
+            return;
+          }
+
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                type: "progress",
+                state: "searching",
+                progress: 68,
+                message: "Extraction et nettoyage du texte...",
+              })}\n\n`
+            )
+          );
+
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                type: "progress",
+                state: "searching",
+                progress: 88,
+                message: "J’analyse les informations...",
+              })}\n\n`
+            )
+          );
+
+          // Structuration du prompt enrichi avec le contenu extrait
+          const scrapingInstruction =
+            `\n\n=== CONTENU DE LA PAGE WEB EXTRAITE ===\n` +
+            `Titre : ${scrapeResult.page.title}\n` +
+            `URL Source : ${scrapeResult.page.url}\n` +
+            `Nombre de mots : ${scrapeResult.page.wordCount}\n\n` +
+            `Contenu de la page :\n${scrapeResult.page.content}\n\n` +
+            `=== CONSIGNES D'ANALYSE ===\n` +
+            `1. Réponds précisément à la demande de l'utilisateur en te fondant sur le contenu textuel extrait ci-dessus.\n` +
+            `2. Cite les points clés et synthétise de manière claire et structurée.\n` +
+            `3. Ne fais aucune supposition ou invention sur les éléments non présents dans le texte extrait.\n` +
+            `4. Termine par la mention de la source : [${scrapeResult.page.title}](${scrapeResult.page.url}).`;
+
+          activeMessages = [
+            ...formattedMessages.slice(0, -1),
+            {
+              role: "user",
+              content: `${content}\n${scrapingInstruction}`,
+            },
+          ];
+        }
+
+        // ==========================================
+        // MODE NORMAL (Comportement actuel préservé)
+        // ==========================================
+        else {
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                type: "progress",
+                state: "walking",
+                progress: 15,
+                message: "Je commence la recherche...",
+              })}\n\n`
+            )
+          );
+
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                type: "progress",
+                state: "running",
+                progress: 38,
+                message: "J’accélère !",
+              })}\n\n`
+            )
+          );
+        }
+
+        // 5. Appeler la passerelle IA avec le flux préparé
+        let gatewayResult;
+        try {
+          gatewayResult = await AIGatewayService.streamCompletion({
+            model,
+            messages: activeMessages,
+          });
+        } catch (callErr: unknown) {
+          logger.error("ChatAPI", "Échec de connexion au service IA", { error: String(callErr) });
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                type: "progress",
+                state: "error",
+                progress: 0,
+                errorCode: "NETWORK_ERROR",
+                message: "Impossible d'établir la connexion au serveur IA 😔",
+              })}\n\n`
+            )
+          );
+          controller.close();
+          return;
+        }
+
+        const aiResponseStream = gatewayResult.response;
 
         if (!aiResponseStream.body) {
           controller.enqueue(
@@ -218,7 +521,6 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
         const reader = aiResponseStream.body.getReader();
         let buffer = "";
         let hasTriggeredSearching = false;
-        let hasTriggeredAnalysis = false;
 
         try {
           while (true) {
@@ -237,7 +539,6 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
                 continue;
               }
 
-              // Détecter les réponses d'erreur directes OpenRouter JSON
               if (trimmed.startsWith('{"error":') || trimmed.startsWith('data: {"error":')) {
                 logger.warn("ChatAPI", "Error object detected in OpenRouter stream", { raw: trimmed });
                 continue;
@@ -248,8 +549,7 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
                   const parsed = JSON.parse(trimmed.slice(6));
                   const textChunk = parsed.choices?.[0]?.delta?.content || "";
                   if (textChunk) {
-                    // 3. Étape SEARCHING (72%) dès le premier chunk de texte reçu
-                    if (!hasTriggeredSearching) {
+                    if (!hasTriggeredSearching && workMode === "normal") {
                       hasTriggeredSearching = true;
                       controller.enqueue(
                         encoder.encode(
@@ -264,21 +564,6 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
                     }
 
                     fullResponseContent += textChunk;
-
-                    // 4. Étape SEARCHING / Analyse approfondie (92%) dès que du contenu substantiel est généré
-                    if (!hasTriggeredAnalysis && fullResponseContent.length > 100) {
-                      hasTriggeredAnalysis = true;
-                      controller.enqueue(
-                        encoder.encode(
-                          `data: ${JSON.stringify({
-                            type: "progress",
-                            state: "searching",
-                            progress: 92,
-                            message: "J’analyse les résultats...",
-                          })}\n\n`
-                        )
-                      );
-                    }
 
                     controller.enqueue(
                       encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: textChunk })}\n\n`)
@@ -301,7 +586,7 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
                 state: "error",
                 progress: 0,
                 errorCode: "NETWORK_ERROR",
-                message: "Connexion interrompue lors de la recherche 😔",
+                message: "Connexion interrompue lors de la génération 😔",
               })}\n\n`
             )
           );
@@ -312,7 +597,7 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
           logger.warn("ChatAPI", "Stream produced empty content. Triggering emergency fallback generation.");
           try {
             const fallbackText = await AIService.quickFallbackCompletion({
-              messages: formattedMessages,
+              messages: activeMessages,
               model: gatewayResult.modelUsed,
             });
 
@@ -327,7 +612,7 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
           }
         }
 
-        // Si même le secours n'a rien renvoyé, afficher un message d'assistance chaleureux et courtois
+        // Si pour une raison quelconque le secours est encore vide
         if (!fullResponseContent.trim()) {
           const defaultApology =
             mode === "nouchi"
@@ -336,6 +621,15 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
           fullResponseContent = defaultApology;
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: defaultApology })}\n\n`)
+          );
+        }
+
+        // En mode Recherche Approfondie : ajouter la section citations cliquables si le modèle ne l'a pas fait
+        if (workMode === "deep-research" && citationsToAppend && !fullResponseContent.includes(citationsToAppend)) {
+          const sourcesFooter = `\n\n### 📚 Sources consultées :\n${citationsToAppend}\n`;
+          fullResponseContent += sourcesFooter;
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: sourcesFooter })}\n\n`)
           );
         }
 
@@ -349,7 +643,7 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
 
         const finalContent = sanitizedContent || fullResponseContent;
 
-        // Save AI Message in DB
+        // Sauvegarder la réponse en base de données
         const savedMessage = await MessageRepository.create({
           conversationId: conversation.id,
           role: "ASSISTANT",
@@ -360,25 +654,24 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
 
         logger.info("ChatAPI", "Completed chat response", {
           conversationId: conversation.id,
-          providerUsed: gatewayResult.providerUsed,
+          workMode,
           modelUsed: gatewayResult.modelUsed,
-          fallbackOccurred: gatewayResult.fallbackOccurred,
           executionTimeMs: executionTime,
         });
 
-        // 5. Étape SUCCESS (100%) : Réponse trouvée et persistée avec succès
+        // 6. Étape SUCCESS (100%) : Réponse trouvée et persistée avec succès
         controller.enqueue(
           encoder.encode(
             `data: ${JSON.stringify({
               type: "progress",
               state: "success",
               progress: 100,
-              message: "Réponse trouvée !",
+              message: workMode === "scraping" ? "Analyse terminée avec succès !" : "Réponse trouvée !",
             })}\n\n`
           )
         );
 
-        // Send final done event with full message metadata and content confirmation
+        // Envoyer l'événement final done
         controller.enqueue(
           encoder.encode(
             `data: ${JSON.stringify({
