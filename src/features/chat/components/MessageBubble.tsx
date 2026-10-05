@@ -65,7 +65,7 @@ export function MessageBubble({ message, onFeedback, onRegenerate }: MessageBubb
       window.URL.revokeObjectURL(blobUrl);
     } catch (err) {
       console.error("Erreur de téléchargement d'image:", err);
-      window.open(url, "_blank");
+      window.open(url, "_blank", "noopener,noreferrer");
     } finally {
       setDownloadingUrl(null);
     }
@@ -126,7 +126,7 @@ export function MessageBubble({ message, onFeedback, onRegenerate }: MessageBubb
                 message={message.mascotMessage || "Impossible d'accéder à cette page"}
               />
               {message.content && (
-                <div className="w-full text-[15px] leading-relaxed break-words bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4 text-slate-800 dark:text-slate-200">
+                <div className="w-full text-[15px] leading-relaxed wrap-break-word bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4 text-slate-800 dark:text-slate-200">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
