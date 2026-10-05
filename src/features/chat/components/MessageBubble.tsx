@@ -117,7 +117,46 @@ export function MessageBubble({ message, onFeedback, onRegenerate }: MessageBubb
               : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-tl-sm border border-slate-100 dark:border-slate-700 shadow-sm"
           }`}
         >
-          {message.content ? (
+          {message.mascotState === "error" || message.content?.startsWith("❌") || message.content?.includes("Échec du scraping") ? (
+            <div className="py-2 space-y-3 flex flex-col items-center">
+              <AkwabaMascot
+                state="error"
+                progress={0}
+                errorCode={message.mascotErrorCode || (message.content?.includes("robots.txt") ? "ROBOTS_DENIED" : "NETWORK_ERROR")}
+                message={message.mascotMessage || "Impossible d'accéder à cette page"}
+              />
+              {message.content && (
+                <div className="w-full text-[15px] leading-relaxed break-words bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4 text-slate-800 dark:text-slate-200">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                      ul: ({ children }) => <ul className="list-disc pl-5 my-2 space-y-1">{children}</ul>,
+                      li: ({ children }) => <li className="my-0.5">{children}</li>,
+                      strong: ({ children }) => <strong className="font-semibold text-slate-900 dark:text-white">{children}</strong>,
+                      code: ({ children }) => (
+                        <code className="px-1.5 py-0.5 bg-black/10 dark:bg-white/10 rounded font-mono text-xs">
+                          {children}
+                        </code>
+                      ),
+                    }}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
+                </div>
+              )}
+              {onRegenerate && (
+                <button
+                  type="button"
+                  onClick={onRegenerate}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-semibold shadow-sm transition-all duration-200 active:scale-95 cursor-pointer mt-1"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Régénérer la réponse</span>
+                </button>
+              )}
+            </div>
+          ) : message.content ? (
             <div className="prose dark:prose-invert max-w-none wrap-break-word text-sm sm:text-base leading-relaxed">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
@@ -177,25 +216,6 @@ export function MessageBubble({ message, onFeedback, onRegenerate }: MessageBubb
               >
                 {message.content}
               </ReactMarkdown>
-            </div>
-          ) : message.mascotState === "error" ? (
-            <div className="py-2 space-y-3 flex flex-col items-center">
-              <AkwabaMascot
-                state="error"
-                progress={0}
-                errorCode={message.mascotErrorCode || "NETWORK_ERROR"}
-                message={message.mascotMessage}
-              />
-              {onRegenerate && (
-                <button
-                  type="button"
-                  onClick={onRegenerate}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-semibold shadow-sm transition-all duration-200 active:scale-95 cursor-pointer mt-1"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Régénérer la réponse</span>
-                </button>
-              )}
             </div>
           ) : message.executionTime ? (
             <div className="text-sm text-slate-600 dark:text-slate-300 py-2 space-y-2">

@@ -224,6 +224,7 @@ export function useChatSession() {
                   );
                 } else if (data.type === "done") {
                   const verifiedContent = currentStreamText || data.content || "";
+                  const isError = data.mascotState === "error" || Boolean(data.errorCode) || verifiedContent.startsWith("❌");
                   setMessages((prev) =>
                     prev.map((m) =>
                       m.id === aiMessageId
@@ -232,9 +233,12 @@ export function useChatSession() {
                             id: data.messageId || aiMessageId,
                             content: m.content || verifiedContent,
                             executionTime: data.executionTime,
-                            mascotState: "success",
-                            mascotProgress: 100,
-                            mascotMessage: "Réponse trouvée !",
+                            mascotState: isError ? "error" : "success",
+                            mascotProgress: isError ? 0 : 100,
+                            mascotMessage: isError
+                              ? (data.message || m.mascotMessage || "Impossible d'accéder à cette ressource")
+                              : "Réponse trouvée !",
+                            mascotErrorCode: data.mascotErrorCode || data.errorCode || m.mascotErrorCode,
                             modelUsed:
                               modelsList.find((mod) => mod.slug === data.modelUsed)?.name ||
                               data.modelUsed,

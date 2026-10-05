@@ -397,6 +397,9 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
                   executionTime: Date.now() - startTime,
                   modelUsed: "Akwaba Scraping Engine",
                   content: responseErrText,
+                  mascotState: "error",
+                  mascotErrorCode: errCode,
+                  message: errMsg,
                 })}\n\n`
               )
             );

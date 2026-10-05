@@ -48,12 +48,33 @@ export class ScrapingService {
       };
     }
 
-    // 3. Vérification de robots.txt
+    // 3. Vérification de robots.txt et détection de domaines protégés par connexion
+    let domain = "";
+    try {
+      domain = new URL(sanitizedUrl).hostname.replace(/^www\./, "");
+    } catch {}
+
+    const isLinkedIn = domain.includes("linkedin.com");
+    const isSocialAuthWall =
+      isLinkedIn ||
+      domain.includes("facebook.com") ||
+      domain.includes("instagram.com") ||
+      domain.includes("twitter.com") ||
+      domain.includes("x.com");
+
     const robotsCheck = await RobotsService.isAllowed(sanitizedUrl);
-    if (!robotsCheck.allowed) {
+    if (!robotsCheck.allowed || isSocialAuthWall) {
+      const siteName = isLinkedIn ? "LinkedIn" : domain;
+      const customMessage = isSocialAuthWall
+        ? `L'accès à **${siteName}** nécessite une connexion utilisateur (compte connecté) et son fichier \`robots.txt\` interdit le scraping automatisé des profils.\n\n` +
+          `💡 **Comment procéder autrement :**\n` +
+          `• **Copier-coller le profil :** Copiez directement le texte du profil et collez-le ici dans le chat.\n` +
+          `• **Recherche approfondie 🔎 :** Activez le bouton *Recherche approfondie* pour que j'explore les informations publiques disponibles sur le web.`
+        : "Je ne peux pas récupérer automatiquement cette page dans ces conditions (accès restreint par robots.txt).";
+
       return {
         success: false,
-        error: "Je ne peux pas récupérer automatiquement cette page dans ces conditions (accès restreint par robots.txt).",
+        error: customMessage,
         errorCode: "ROBOTS_DENIED",
       };
     }
