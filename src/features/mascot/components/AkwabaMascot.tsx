@@ -191,6 +191,7 @@ export function AkwabaMascot({
               width={dimensions.imageSize}
               height={dimensions.imageSize}
               priority
+              unoptimized
               className="object-contain drop-shadow-md pointer-events-none select-none"
             />
           </motion.div>

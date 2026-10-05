@@ -5,11 +5,11 @@ import { MascotState } from "../types/mascot.types";
  * Les noms avec espaces correspondent exactement aux fichiers PNG de public/assets/.
  */
 export const mascotAssets = {
-  walking: "/assets/akwaba chat bot 1.png",
-  running: "/assets/akwaba chat bot 2.png",
-  searching: "/assets/akwaba chat bot 3.png",
-  success: "/assets/akwaba chat bot 4.png",
-  error: "/assets/akwaba chat bot 5.png",
+  walking: "/assets/mascot-walking.png",
+  running: "/assets/mascot-running.png",
+  searching: "/assets/mascot-searching.png",
+  success: "/assets/mascot-success.png",
+  error: "/assets/mascot-error.png",
 } as const;
 
 export const defaultStateMessages: Record<MascotState, string> = {
