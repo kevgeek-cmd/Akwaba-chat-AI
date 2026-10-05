@@ -125,13 +125,16 @@ export function useChatSession() {
       setMessages((prev) => [...prev, userMsg]);
       setIsLoading(true);
 
-      // 2. Placeholder Message IA
+      // 2. Placeholder Message IA avec état initial Mascot (Walking)
       const aiMessageId = `temp-ai-${crypto.randomUUID()}`;
       const aiMsgPlaceholder: MessageData = {
         id: aiMessageId,
         role: "ASSISTANT",
         content: "",
         modelUsed: modelsList.find((m) => m.slug === currentModel)?.name || currentModel,
+        mascotState: "walking",
+        mascotProgress: 15,
+        mascotMessage: "Je commence la recherche...",
       };
 
       setMessages((prev) => [...prev, aiMsgPlaceholder]);
@@ -183,6 +186,20 @@ export function useChatSession() {
                 if (data.type === "meta" && data.conversationId) {
                   setCurrentConversationId(data.conversationId);
                   fetchConversations();
+                } else if (data.type === "progress") {
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === aiMessageId
+                        ? {
+                            ...m,
+                            mascotState: data.state,
+                            mascotProgress: data.progress,
+                            mascotMessage: data.message,
+                            mascotErrorCode: data.errorCode,
+                          }
+                        : m
+                    )
+                  );
                 } else if (data.type === "chunk" && data.text) {
                   currentStreamText += data.text;
                   const newText = currentStreamText;
@@ -201,6 +218,9 @@ export function useChatSession() {
                             id: data.messageId || aiMessageId,
                             content: m.content || verifiedContent,
                             executionTime: data.executionTime,
+                            mascotState: "success",
+                            mascotProgress: 100,
+                            mascotMessage: "Réponse trouvée !",
                             modelUsed:
                               modelsList.find((mod) => mod.slug === data.modelUsed)?.name ||
                               data.modelUsed,
@@ -228,7 +248,13 @@ export function useChatSession() {
               m.id === aiMessageId
                 ? {
                     ...m,
-                    content: `Erreur : ${errorMessage}`,
+                    content: "",
+                    mascotState: "error",
+                    mascotProgress: 0,
+                    mascotErrorCode: "NETWORK_ERROR",
+                    mascotMessage: errorMessage.includes("timeout")
+                      ? "Le traitement a pris trop de temps. Réessaie dans un instant."
+                      : "Un problème est survenu. Réessaie dans un instant.",
                   }
                 : m
             )

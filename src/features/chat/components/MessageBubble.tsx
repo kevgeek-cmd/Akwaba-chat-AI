@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, Sparkles, ExternalLink, Download } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ElephantLoader } from "@/components/shared/ElephantLoader";
+import { AkwabaMascot, MascotState, MascotErrorCode } from "@/features/mascot";
 
 export interface MessageData {
   id: string;
@@ -15,6 +15,10 @@ export interface MessageData {
   executionTime?: number | null;
   feedback?: "LIKE" | "DISLIKE" | "NONE";
   attachments?: Array<{ fileUrl: string }>;
+  mascotState?: MascotState;
+  mascotProgress?: number;
+  mascotMessage?: string;
+  mascotErrorCode?: MascotErrorCode | string;
 }
 
 interface MessageBubbleProps {
@@ -174,24 +178,53 @@ export function MessageBubble({ message, onFeedback, onRegenerate }: MessageBubb
                 {message.content}
               </ReactMarkdown>
             </div>
-          ) : message.executionTime ? (
-            <div className="text-sm text-slate-600 dark:text-slate-300 py-2 space-y-2">
-              <p className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-medium text-xs sm:text-sm">
-                <span>⚠️ La connexion a été interrompue avant la réception complète.</span>
-              </p>
+          ) : message.mascotState === "error" ? (
+            <div className="py-2 space-y-3 flex flex-col items-center">
+              <AkwabaMascot
+                state="error"
+                progress={0}
+                errorCode={message.mascotErrorCode || "NETWORK_ERROR"}
+                message={message.mascotMessage}
+              />
               {onRegenerate && (
                 <button
                   type="button"
                   onClick={onRegenerate}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-akwaba-green hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all duration-200 active:scale-95"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-semibold shadow-sm transition-all duration-200 active:scale-95 cursor-pointer mt-1"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   <span>Régénérer la réponse</span>
                 </button>
               )}
             </div>
+          ) : message.executionTime ? (
+            <div className="text-sm text-slate-600 dark:text-slate-300 py-2 space-y-2">
+              <AkwabaMascot
+                state="error"
+                progress={0}
+                errorCode="NETWORK_ERROR"
+                message="La connexion a été interrompue avant la réception complète 😔"
+              />
+              {onRegenerate && (
+                <div className="text-center pt-2">
+                  <button
+                    type="button"
+                    onClick={onRegenerate}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-akwaba-green hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all duration-200 active:scale-95"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Régénérer la réponse</span>
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
-            <ElephantLoader />
+            <AkwabaMascot
+              state={message.mascotState || "walking"}
+              progress={message.mascotProgress ?? 15}
+              message={message.mascotMessage}
+              errorCode={message.mascotErrorCode}
+            />
           )}
         </div>
 

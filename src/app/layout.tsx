@@ -42,7 +42,10 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="h-full bg-akwaba-bg-light dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans">
+      <body
+        className={`${inter.className} h-full bg-akwaba-bg-light dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans`}
+        suppressHydrationWarning
+      >
         {children}
       </body>
     </html>

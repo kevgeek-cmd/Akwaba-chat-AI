@@ -7,6 +7,7 @@ import { WelcomeView } from "./WelcomeView";
 import { MessageBubble } from "./MessageBubble";
 import { ChatInput } from "./ChatInput";
 import { SettingsModal } from "@/components/shared/SettingsModal";
+import { MascotDevTester } from "@/features/mascot";
 import { useChatSession } from "../hooks/useChatSession";
 
 export function ChatWorkspace() {
@@ -139,6 +140,9 @@ export function ChatWorkspace() {
         currentModel={currentModel}
         onSaveModel={setCurrentModel}
       />
+
+      {/* Mode Testeur Développeur Mascot */}
+      <MascotDevTester />
     </div>
   );
 }

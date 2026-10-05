@@ -175,13 +175,50 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
           encoder.encode(`data: ${JSON.stringify({ type: "meta", conversationId: conversation.id })}\n\n`)
         );
 
+        // 1. Étape WALKING (15%) : Début de prise en charge de la requête
+        controller.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({
+              type: "progress",
+              state: "walking",
+              progress: 15,
+              message: "Je commence la recherche...",
+            })}\n\n`
+          )
+        );
+
+        // 2. Étape RUNNING (38%) : Connexion au modèle & passerelle IA
+        controller.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({
+              type: "progress",
+              state: "running",
+              progress: 38,
+              message: "J’accélère !",
+            })}\n\n`
+          )
+        );
+
         if (!aiResponseStream.body) {
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                type: "progress",
+                state: "error",
+                progress: 0,
+                errorCode: "NETWORK_ERROR",
+                message: "Impossible d'établir la connexion au serveur IA 😔",
+              })}\n\n`
+            )
+          );
           controller.close();
           return;
         }
 
         const reader = aiResponseStream.body.getReader();
         let buffer = "";
+        let hasTriggeredSearching = false;
+        let hasTriggeredAnalysis = false;
 
         try {
           while (true) {
@@ -211,7 +248,38 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
                   const parsed = JSON.parse(trimmed.slice(6));
                   const textChunk = parsed.choices?.[0]?.delta?.content || "";
                   if (textChunk) {
+                    // 3. Étape SEARCHING (72%) dès le premier chunk de texte reçu
+                    if (!hasTriggeredSearching) {
+                      hasTriggeredSearching = true;
+                      controller.enqueue(
+                        encoder.encode(
+                          `data: ${JSON.stringify({
+                            type: "progress",
+                            state: "searching",
+                            progress: 72,
+                            message: "Je cherche la réponse...",
+                          })}\n\n`
+                        )
+                      );
+                    }
+
                     fullResponseContent += textChunk;
+
+                    // 4. Étape SEARCHING / Analyse approfondie (92%) dès que du contenu substantiel est généré
+                    if (!hasTriggeredAnalysis && fullResponseContent.length > 100) {
+                      hasTriggeredAnalysis = true;
+                      controller.enqueue(
+                        encoder.encode(
+                          `data: ${JSON.stringify({
+                            type: "progress",
+                            state: "searching",
+                            progress: 92,
+                            message: "J’analyse les résultats...",
+                          })}\n\n`
+                        )
+                      );
+                    }
+
                     controller.enqueue(
                       encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: textChunk })}\n\n`)
                     );
@@ -226,6 +294,17 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
           logger.error("ChatAPI", "Error while reading response stream", {
             error: streamReadErr instanceof Error ? streamReadErr.message : String(streamReadErr),
           });
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                type: "progress",
+                state: "error",
+                progress: 0,
+                errorCode: "NETWORK_ERROR",
+                message: "Connexion interrompue lors de la recherche 😔",
+              })}\n\n`
+            )
+          );
         }
 
         // Si pour une raison quelconque le stream est resté vide, faire un secours immédiat
@@ -286,6 +365,18 @@ Nous sommes aujourd'hui le ${currentDate}. Tu réponds de façon professionnelle
           fallbackOccurred: gatewayResult.fallbackOccurred,
           executionTimeMs: executionTime,
         });
+
+        // 5. Étape SUCCESS (100%) : Réponse trouvée et persistée avec succès
+        controller.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({
+              type: "progress",
+              state: "success",
+              progress: 100,
+              message: "Réponse trouvée !",
+            })}\n\n`
+          )
+        );
 
         // Send final done event with full message metadata and content confirmation
         controller.enqueue(
