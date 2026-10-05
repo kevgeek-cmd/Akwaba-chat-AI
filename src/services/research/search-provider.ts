@@ -128,6 +128,57 @@ export class DuckDuckGoSearchProvider implements SearchProvider {
 }
 
 /**
+ * Fournisseur Wikipédia / Wikimedia (100% libre de droit, données encyclopédiques fiables en temps réel)
+ */
+export class WikipediaSearchProvider implements SearchProvider {
+  name = "Wikipédia Open Knowledge";
+
+  async search(query: string, maxResults: number = 3): Promise<SearchResult[]> {
+    const cleanQuery = query
+      .replace(/^(score|match|résultat|qui est|qu'est ce que|c'est quoi|histoire de)/i, "")
+      .trim();
+
+    const encoded = encodeURIComponent(cleanQuery || query);
+    const apiUrl = `https://fr.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encoded}&format=json&origin=*`;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+
+    try {
+      const res = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          "User-Agent": "AkwabaBot/1.0 (https://akwabachat.ci; open knowledge integration)",
+          Accept: "application/json",
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timer);
+
+      if (!res.ok) return [];
+
+      const data = await res.json();
+      const items = data.query?.search || [];
+
+      return items.slice(0, maxResults).map((item: { title: string; snippet: string }) => ({
+        title: `Wikipédia : ${item.title}`,
+        url: `https://fr.wikipedia.org/wiki/${encodeURIComponent(item.title.replace(/ /g, "_"))}`,
+        snippet: item.snippet
+          .replace(/<[^>]+>/g, "")
+          .replace(/&quot;/g, '"')
+          .replace(/&#039;/g, "'")
+          .trim(),
+        source: "fr.wikipedia.org",
+      }));
+    } catch {
+      clearTimeout(timer);
+      return [];
+    }
+  }
+}
+
+/**
  * Fournisseur Tavily (si configuré avec TAVILY_API_KEY)
  */
 export class TavilySearchProvider implements SearchProvider {
@@ -164,32 +215,50 @@ export class TavilySearchProvider implements SearchProvider {
 }
 
 /**
- * Fournisseur combiné avec sélection intelligente et fallback
+ * Fournisseur combiné avec sélection intelligente et agrégation multi-sources
+ * Réunit les bases libres de droits (Wikipédia) et le Web en temps réel (DuckDuckGo / Tavily)
  */
 export class CompositeSearchProvider implements SearchProvider {
   name = "Akwaba Composite Search Provider";
 
-  private providers: SearchProvider[] = [
-    new TavilySearchProvider(),
-    new DuckDuckGoSearchProvider(),
-  ];
+  private wikiProvider = new WikipediaSearchProvider();
+  private tavilyProvider = new TavilySearchProvider();
+  private ddgProvider = new DuckDuckGoSearchProvider();
 
   async search(query: string, maxResults: number = 5): Promise<SearchResult[]> {
-    for (const provider of this.providers) {
-      try {
-        const results = await provider.search(query, maxResults);
-        if (results && results.length > 0) {
-          logger.info("CompositeSearchProvider", `Résultats obtenus via ${provider.name}`, {
-            count: results.length,
-          });
-          return results;
+    const allResults: SearchResult[] = [];
+    const seenUrls = new Set<string>();
+
+    try {
+      // Interroger en parallèle Wikipédia (données ouvertes libres de droits) et DuckDuckGo/Tavily (web direct)
+      const [webResults, wikiResults] = await Promise.all([
+        this.tavilyProvider
+          .search(query, maxResults)
+          .then((res) => (res.length > 0 ? res : this.ddgProvider.search(query, maxResults)))
+          .catch(() => this.ddgProvider.search(query, maxResults)),
+        this.wikiProvider.search(query, 2).catch(() => []),
+      ]);
+
+      // Fusionner les résultats en évitant les doublons
+      for (const r of [...webResults, ...wikiResults]) {
+        if (!seenUrls.has(r.url)) {
+          seenUrls.add(r.url);
+          allResults.push(r);
         }
-      } catch (err) {
-        logger.warn("CompositeSearchProvider", `Provider ${provider.name} a échoué, essai du suivant`, {
-          error: String(err),
-        });
       }
+
+      logger.info("CompositeSearchProvider", "Agrégation multi-sources réussie", {
+        query,
+        webCount: webResults.length,
+        wikiCount: wikiResults.length,
+        total: allResults.length,
+      });
+
+      return allResults.slice(0, maxResults);
+    } catch (err) {
+      logger.error("CompositeSearchProvider", "Erreur lors de l'agrégation", { error: String(err) });
+      return [];
     }
-    return [];
   }
 }
+
